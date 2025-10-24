@@ -9,6 +9,7 @@ const Stores = () => import('../views/Stores.vue');
 const StoreDetail = () => import('../views/StoreDetail.vue');
 const StoreForm = () => import('../views/StoreForm.vue');
 const StoreActivity = () => import('../views/StoreActivity.vue');
+const Cart = () => import('../views/Cart.vue');
 const Categories = () => import('../views/Categories.vue');
 const CategoryForm = () => import('../views/CategoryForm.vue');
 
@@ -26,6 +27,7 @@ const router = createRouter({
     { path: '/stores/:id', name: 'store-detail', component: StoreDetail },
     { path: '/stores/:id/edit', name: 'store-edit', component: StoreForm },
     { path: '/stores/:id/activity', name: 'store-activity', component: StoreActivity },
+    { path: '/cart', name: 'cart', component: Cart },
     { path: '/categories', name: 'categories', component: Categories },
     { path: '/categories/new', name: 'category-new', component: CategoryForm },
     { path: '/categories/:id/edit', name: 'category-edit', component: CategoryForm },

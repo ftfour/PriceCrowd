@@ -1,7 +1,7 @@
 <template>
   <section class="space-y-6">
-    <h2 class="text-2xl font-semibold">???????</h2>
-    <p class="text-gray-700">????? ?????????? ? PriceCrowd. ???? � ???????? ?????????? ???? ?????????.</p>
+    <h2 class="text-2xl font-semibold">Алло</h2>
+    <p class="text-gray-700">Добро пожаловать в PriceCrowd. Сервис для экономии среднего чека.</p>
 
     <div class="rounded-lg border bg-white divide-y">
       <div v-for="a in activities" :key="a.key" class="p-4 flex items-start justify-between gap-3">
@@ -10,8 +10,8 @@
           <div class="text-xs text-slate-500">{{ formatDate(a.ts_ms) }}</div>
         </div>
         <div class="shrink-0 flex items-center gap-3">
-          <RouterLink v-if="a.product_id" :to="`/products/${a.product_id}`" class="text-xs text-blue-600 hover:underline">?????</RouterLink>
-          <RouterLink v-if="a.store_id" :to="`/stores/${a.store_id}`" class="text-xs text-blue-600 hover:underline">???????</RouterLink>
+          <RouterLink v-if="a.product_id" :to="`/products/${a.product_id}`" class="text-xs text-blue-600 hover:underline">Товар</RouterLink>
+          <RouterLink v-if="a.store_id" :to="`/stores/${a.store_id}`" class="text-xs text-blue-600 hover:underline">Магазин</RouterLink>
         </div>
       </div>
       <div v-if="activities.length===0" class="p-8 text-center text-slate-500">???? ??? ???????</div>
@@ -28,9 +28,9 @@ const activities = ref<any[]>([]);
 
 function formatDate(ms:number){ const d = new Date(ms); return d.toLocaleString(); }
 function activityTitle(a:any){
-  if (a.kind==='item_added') return `???????? ????? ${a.product_name || ''} (??????? ${a.store_name || ''})`.trim();
-  if (a.kind==='price_updated' || a.kind==='price_set') return `????????? ???? ?? ????? ${a.product_name || ''} (??????? ${a.store_name || ''})`.trim();
-  if (a.kind==='item_removed') return `????? ?????? ${a.product_name || ''} (??????? ${a.store_name || ''})`.trim();
+  if (a.kind==='item_added') return `Доавлен товар ${a.product_name || ''} (в магазине ${a.store_name || ''})`.trim();
+  if (a.kind==='price_updated' || a.kind==='price_set') return `Обновлена цена ? ${a.product_name || ''} (в магазине ${a.store_name || ''})`.trim();
+  if (a.kind==='item_removed') return `Удален товар ${a.product_name || ''} (в магазине ${a.store_name || ''})`.trim();
   return '???????';
 }
 

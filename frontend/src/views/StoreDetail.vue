@@ -22,31 +22,46 @@
           </div>
         </div>
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <!-- Слайд: Цена товара vs средняя по городу -->
-          <div class="rounded-lg border bg-white p-4 flex items-center gap-4">
-            <div class="h-16 w-16 rounded-xl bg-slate-50 border flex items-center justify-center overflow-hidden">
-              <img :src="toAbs(currentSlide.image_url)" alt="prod" class="max-h-14 object-contain" />
+          <!-- Слайд: Сначала средняя по городу, затем график, затем карточка товара -->
+          <div class="rounded-lg border bg-white p-3 sm:p-4 space-y-3">
+            <!-- 1) Средняя цена по городу -->
+            <div class="flex items-baseline justify-between gap-3">
+              <div class="text-sm sm:text-base text-slate-600">Средняя цена по городу</div>
+              <div class="text-lg sm:text-2xl font-semibold text-emerald-600">{{ Number(currentSlide.cityAvg).toLocaleString('ru-RU') }} ₽</div>
             </div>
-            <div class="flex-1 min-w-0">
-              <div class="text-sm text-slate-500">Цена товара vs средняя по городу</div>
-              <div class="text-xl font-semibold text-slate-900 mt-1 truncate">{{ currentSlide.title }}</div>
-              <div class="mt-1 text-emerald-600 font-semibold">{{ currentSlide.price }} ₽
-                <span class="text-slate-400 font-normal">(город: {{ currentSlide.cityAvg }} ₽)</span>
+
+            <!-- 2) График (понятный) -->
+            <div>
+              <div class="text-[11px] sm:text-xs text-slate-500 mb-1">График цены (в этом магазине)</div>
+              <div class="w-full h-16 sm:h-20">
+                <svg viewBox="0 0 100 50" class="w-full h-full text-emerald-500">
+                  <polyline fill="none" stroke="currentColor" stroke-width="2" :points="currentSlide.spark" />
+                </svg>
               </div>
-              <div v-if="currentSlide.cheapest && currentSlide.cheapest.store_id && Number(currentSlide.cheapest.price) < Number(currentSlide.price)" class="text-xs mt-1">
-                Дешевле в
-                <RouterLink :to="`/stores/${currentSlide.cheapest.store_id}`" class="text-blue-600 hover:underline">{{ currentSlide.cheapest.store_name || 'другом магазине' }}</RouterLink>
-                — {{ Number(currentSlide.cheapest.price).toLocaleString('ru-RU') }} ₽
+            </div>
+
+            <!-- 3) Карточка товара -->
+            <div class="grid grid-cols-[56px_1fr_auto] sm:grid-cols-[64px_1fr_auto_auto] items-center gap-3">
+              <div class="h-14 w-14 sm:h-16 sm:w-16 rounded-xl bg-slate-50 border flex items-center justify-center overflow-hidden">
+                <img :src="toAbs(currentSlide.image_url)" alt="prod" class="max-h-12 sm:max-h-14 object-contain" />
+              </div>
+              <div class="min-w-0">
+                <div class="text-base sm:text-lg font-semibold text-slate-900 truncate">{{ currentSlide.title }}</div>
+                <div v-if="currentSlide.cheapest && currentSlide.cheapest.store_id && Number(currentSlide.cheapest.price) < Number(currentSlide.price)" class="text-[11px] sm:text-xs mt-1 truncate">
+                  Дешевле в
+                  <RouterLink :to="`/stores/${currentSlide.cheapest.store_id}`" class="text-blue-600 hover:underline">{{ currentSlide.cheapest.store_name || 'другом магазине' }}</RouterLink>
+                  — {{ Number(currentSlide.cheapest.price).toLocaleString('ru-RU') }} ₽
+                </div>
+              </div>
+              <div class="text-emerald-600 font-semibold text-sm sm:text-base">{{ Number(currentSlide.price).toLocaleString('ru-RU') }} ₽</div>
+              <div class="hidden sm:flex flex-col gap-1 ml-1">
+                <button @click="prevSlide" title="Назад" class="h-7 w-7 rounded border text-slate-600">‹</button>
+                <button @click="nextSlide" title="Вперёд" class="h-7 w-7 rounded border text-slate-600">›</button>
               </div>
             </div>
-            <div class="w-40 h-20">
-              <svg viewBox="0 0 100 50" class="w-full h-full text-emerald-500">
-                <polyline fill="none" stroke="currentColor" stroke-width="2" :points="currentSlide.spark" />
-              </svg>
-            </div>
-            <div class="flex flex-col gap-1 ml-2">
-              <button @click="prevSlide" title="Назад" class="h-8 w-8 rounded border text-slate-600">‹</button>
-              <button @click="nextSlide" title="Вперёд" class="h-8 w-8 rounded border text-slate-600">›</button>
+            <div class="sm:hidden flex justify-end gap-2">
+              <button @click="prevSlide" title="Назад" class="h-8 px-3 rounded border text-slate-600">‹</button>
+              <button @click="nextSlide" title="Вперёд" class="h-8 px-3 rounded border text-slate-600">›</button>
             </div>
           </div>
           <!-- Активность (кратко) -->

@@ -10,6 +10,7 @@
           <RouterLink to="/products" class="text-gray-700 hover:text-black">Товары</RouterLink>
           <RouterLink to="/categories" class="text-gray-700 hover:text-black">Категории</RouterLink>
           <RouterLink to="/stores" class="text-gray-700 hover:text-black">Магазины</RouterLink>
+          <RouterLink to="/cart" class="text-gray-700 hover:text-black">Корзина</RouterLink>
           <RouterLink to="/about" class="text-gray-700 hover:text-black">О проекте</RouterLink>
         </nav>
       </div>
