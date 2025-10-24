@@ -29,9 +29,9 @@ const activities = ref<any[]>([]);
 
 function formatDate(ms:number){ const d = new Date(ms); return d.toLocaleString(); }
 function activityTitle(a:any){
-  if (a.kind==='price_updated' || a.kind==='price_set') return `Цена обновлена: ${a.price} ₽`;
-  if (a.kind==='item_removed') return 'Товар удалён';
-  if (a.kind==='item_added') return 'Добавлен товар';
+  if (a.kind==='item_added') return `Добавлен товар ${a.product_name || ''}`.trim();
+  if (a.kind==='price_updated' || a.kind==='price_set') return `Обновлена цена на товар ${a.product_name || ''}`.trim();
+  if (a.kind==='item_removed') return `Товар удален ${a.product_name || ''}`.trim();
   return 'Событие';
 }
 
@@ -39,10 +39,9 @@ async function load(){
   const res = await fetch(`${API}/stores/${id}/activities`);
   if (res.ok){
     const arr = await res.json();
-    activities.value = arr.map((x:any)=> ({ key: (typeof x._id==='string'? x._id : x._id?.$oid) || `${x.ts_ms}`, product_id: (typeof x.product_id==='string'? x.product_id : x.product_id?.$oid) || null, kind: x.kind, ts_ms: x.ts_ms, price: x.price }));
+    activities.value = arr.map((x:any)=> ({ key: (typeof x._id==='string'? x._id : x._id?.$oid) || `${x.ts_ms}`, product_id: (typeof x.product_id==='string'? x.product_id : x.product_id?.$oid) || null, kind: x.kind, ts_ms: x.ts_ms, price: x.price, product_name: x.product_name }));
   }
 }
 
 onMounted(load);
 </script>
-

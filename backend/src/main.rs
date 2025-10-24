@@ -134,6 +134,8 @@ struct StoreActivity {
     ts_ms: i64,
     #[serde(skip_serializing_if = "Option::is_none")]
     price: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    product_name: Option<String>,
 }
 
 #[tokio::main]
@@ -506,13 +508,15 @@ async fn add_store_product(State(state): State<AppState>, Path(id): Path<String>
     let filter = doc!{"store_id": store_oid, "product_id": product_oid};
     let update = doc!{"$set": {"store_id": store_oid, "product_id": product_oid, "price": payload.price}};
     match state.store_items.update_one(filter.clone(), update, mongodb::options::UpdateOptions::builder().upsert(true).build()).await {
-        Ok(_) => {
+        Ok(res) => {
             let now_ms = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_millis() as i64;
-            let activity = StoreActivity { id: None, store_id: store_oid, product_id: Some(product_oid), kind: "price_set".to_string(), ts_ms: now_ms, price: Some(payload.price) };
-            let _ = state.store_activities.insert_one(activity, None).await;
-            // return the joined item
+            // fetch product to include name in activity and response
             match state.products.find_one(doc!{"_id": product_oid}, None).await {
                 Ok(prod_opt) => {
+                    let product_name = prod_opt.as_ref().map(|p| p.title.clone());
+                    let kind = if res.upserted_id.is_some() { "item_added" } else { "price_updated" };
+                    let activity = StoreActivity { id: None, store_id: store_oid, product_id: Some(product_oid), kind: kind.to_string(), ts_ms: now_ms, price: Some(payload.price), product_name };
+                    let _ = state.store_activities.insert_one(activity, None).await;
                     let resp = serde_json::json!({"product_id": product_oid, "price": payload.price, "product": prod_opt});
                     (StatusCode::CREATED, Json(resp)).into_response()
                 }
@@ -533,7 +537,9 @@ async fn update_store_product(State(state): State<AppState>, Path((id, product_i
     match state.store_items.update_one(filter, update, None).await {
         Ok(res) if res.matched_count > 0 => {
             let now_ms = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_millis() as i64;
-            let activity = StoreActivity { id: None, store_id: store_oid, product_id: Some(product_oid), kind: "price_updated".to_string(), ts_ms: now_ms, price: Some(body.price) };
+            // fetch product name for activity
+            let product_name = match state.products.find_one(doc!{"_id": product_oid}, None).await { Ok(opt)=> opt.map(|p| p.title), Err(_)=> None };
+            let activity = StoreActivity { id: None, store_id: store_oid, product_id: Some(product_oid), kind: "price_updated".to_string(), ts_ms: now_ms, price: Some(body.price), product_name };
             let _ = state.store_activities.insert_one(activity, None).await;
             StatusCode::NO_CONTENT.into_response()
         },
@@ -548,7 +554,8 @@ async fn remove_store_product(State(state): State<AppState>, Path((id, product_i
     match state.store_items.delete_one(filter, None).await {
         Ok(res) if res.deleted_count == 1 => {
             let now_ms = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_millis() as i64;
-            let activity = StoreActivity { id: None, store_id: store_oid, product_id: Some(product_oid), kind: "item_removed".to_string(), ts_ms: now_ms, price: None };
+            let product_name = match state.products.find_one(doc!{"_id": product_oid}, None).await { Ok(opt)=> opt.map(|p| p.title), Err(_)=> None };
+            let activity = StoreActivity { id: None, store_id: store_oid, product_id: Some(product_oid), kind: "item_removed".to_string(), ts_ms: now_ms, price: None, product_name };
             let _ = state.store_activities.insert_one(activity, None).await;
             StatusCode::NO_CONTENT.into_response()
         },
