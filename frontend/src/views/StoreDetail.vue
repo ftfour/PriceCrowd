@@ -33,12 +33,20 @@
               <div class="mt-1 text-emerald-600 font-semibold">{{ currentSlide.price }} ₽
                 <span class="text-slate-400 font-normal">(город: {{ currentSlide.cityAvg }} ₽)</span>
               </div>
-              <div class="text-xs text-slate-500 mt-1">Автопереключение каждые 4 сек</div>
+              <div v-if="currentSlide.cheapest && currentSlide.cheapest.store_id && Number(currentSlide.cheapest.price) < Number(currentSlide.price)" class="text-xs mt-1">
+                Дешевле в
+                <RouterLink :to="`/stores/${currentSlide.cheapest.store_id}`" class="text-blue-600 hover:underline">{{ currentSlide.cheapest.store_name || 'другом магазине' }}</RouterLink>
+                — {{ Number(currentSlide.cheapest.price).toLocaleString('ru-RU') }} ₽
+              </div>
             </div>
             <div class="w-40 h-20">
               <svg viewBox="0 0 100 50" class="w-full h-full text-emerald-500">
                 <polyline fill="none" stroke="currentColor" stroke-width="2" :points="currentSlide.spark" />
               </svg>
+            </div>
+            <div class="flex flex-col gap-1 ml-2">
+              <button @click="prevSlide" title="Назад" class="h-8 w-8 rounded border text-slate-600">‹</button>
+              <button @click="nextSlide" title="Вперёд" class="h-8 w-8 rounded border text-slate-600">›</button>
             </div>
           </div>
           <!-- Активность (кратко) -->
@@ -118,7 +126,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, computed, onUnmounted } from 'vue';
+import { onMounted, ref, computed } from 'vue';
 import { useRoute, RouterLink } from 'vue-router';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8080';
@@ -162,34 +170,20 @@ const kpis = [
   { title: 'Уникальных товаров', value: '35' },
 ];
 
-// Слайды по товарам
+// Слайды по товарам (реальные данные)
 function idOf(x:any){ return typeof x === 'string' ? x : x?.$oid; }
-function makeSpark(base:number, seedStr:string){
-  let seed = 0; for (let i=0;i<seedStr.length;i++) seed = (seed*31 + seedStr.charCodeAt(i))>>>0;
-  function rnd(){ seed = (1103515245*seed + 12345)>>>0; return (seed/0xffffffff); }
-  const pts:number[] = Array.from({length: 12}, ()=> base + Math.round((rnd()-0.5)*6));
-  const min = Math.min(...pts), max = Math.max(...pts);
-  const range = Math.max(1, max-min);
-  return pts.map((v,i)=> `${(i/(pts.length-1))*100},${50-((v-min)/range)*50}`).join(' ');
+function makeSparkFromHistory(hist: Array<{ts_ms:number, price:number}>){
+  if (!hist || hist.length===0) return '';
+  const vals = hist.map(h=> Number(h.price));
+  const min = Math.min(...vals), max = Math.max(...vals);
+  const range = Math.max(1, max - min);
+  return vals.map((v,i)=> `${(i/(vals.length-1))*100},${50-((v-min)/range)*50}`).join(' ');
 }
-const slides = computed(()=> storeItems.value.map((it:any)=> ({
-  key: it.product_id,
-  title: it.product?.title || it.product_id,
-  image_url: it.product?.image_url,
-  price: Number(it.price) || 0,
-  cityAvg: Math.round((Number(it.price)||0)*1.04),
-  spark: makeSpark(Number(it.price)||0, String(it.product_id)),
-})));
+const slides = ref<any[]>([]);
 const slideIndex = ref(0);
-const currentSlide = computed(()=> slides.value.length ? slides.value[slideIndex.value % slides.value.length] : { title: 'Нет данных', image_url: '', price: 0, cityAvg: 0, spark: '' });
-let slideTimer: any = null;
-function startSlides(){
-  if (slideTimer) clearInterval(slideTimer);
-  if (slides.value.length===0) return;
-  slideTimer = setInterval(()=> { slideIndex.value = (slideIndex.value + 1) % slides.value.length; }, 4000);
-}
-onMounted(()=> startSlides());
-onUnmounted(()=> { if (slideTimer) clearInterval(slideTimer); });
+const currentSlide = computed(()=> slides.value.length ? slides.value[slideIndex.value % slides.value.length] : { title: 'Нет данных', image_url: '', price: 0, cityAvg: 0, spark: '', cheapest: null });
+function prevSlide(){ if (slides.value.length) slideIndex.value = (slideIndex.value - 1 + slides.value.length) % slides.value.length; }
+function nextSlide(){ if (slides.value.length) slideIndex.value = (slideIndex.value + 1) % slides.value.length; }
 
 // Store items logic
 async function loadProducts(){
@@ -208,7 +202,20 @@ async function loadStoreItems(){
     const map: Record<string, number> = {};
     for (const it of storeItems.value){ map[it.key] = Number(it.price) || 0; }
     priceEdit.value = map;
-    startSlides();
+  }
+  // Load insights (city avg, cheapest, history) and build slides
+  const ins = await fetch(`${API}/stores/${id}/products/insights`);
+  if (ins.ok){
+    const data = await ins.json();
+    slides.value = data.map((x:any)=> ({
+      key: idOf(x.product_id),
+      title: x.product_title,
+      image_url: x.product_image_url,
+      price: x.store_price ?? 0,
+      cityAvg: x.city_avg ? Math.round(Number(x.city_avg)) : 0,
+      cheapest: x.cheapest ? { store_id: idOf(x.cheapest.store_id), store_name: x.cheapest.store_name, price: x.cheapest.price } : null,
+      spark: makeSparkFromHistory(x.history || []),
+    }));
   }
 }
 
@@ -255,4 +262,3 @@ async function loadActivities(){
 }
 onMounted(loadActivities);
 </script>
-
