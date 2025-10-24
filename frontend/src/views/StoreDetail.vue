@@ -10,13 +10,9 @@
           <p class="text-slate-600 mt-1">{{ store.addr }}</p>
           <p class="mt-3 text-slate-700 text-sm">{{ store.desc }}</p>
         </div>
-        <div class="text-right min-w-[120px]">
-          <div class="text-yellow-500 font-semibold text-xl">★ 4.6</div>
-          <div class="text-slate-400 text-sm">1 товар</div>
-        </div>
       </div>
 
-      <!-- Аналитика магазина (демо) -->
+      <!-- Аналитика по магазину -->
       <div>
         <h2 class="text-lg font-semibold mb-3">Аналитика по магазину</h2>
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
@@ -26,21 +22,26 @@
           </div>
         </div>
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <div class="rounded-lg border bg-white p-4 flex items-center justify-between">
-            <div>
+          <!-- Слайд: Цена товара vs средняя по городу -->
+          <div class="rounded-lg border bg-white p-4 flex items-center gap-4">
+            <div class="h-16 w-16 rounded-xl bg-slate-50 border flex items-center justify-center overflow-hidden">
+              <img :src="toAbs(currentSlide.image_url)" alt="prod" class="max-h-14 object-contain" />
+            </div>
+            <div class="flex-1 min-w-0">
               <div class="text-sm text-slate-500">Цена товара vs средняя по городу</div>
-              <div class="text-xl font-semibold text-slate-900 mt-1">{{ priceInsight.product.label }}</div>
-              <div class="mt-1 text-emerald-600 font-semibold">{{ priceInsight.product.price }} ₽ <span class="text-slate-400 font-normal">(город: {{ priceInsight.cityAvg }} ₽)</span></div>
-              <div class="text-sm mt-1" :class="priceInsight.trend7d<0?'text-emerald-600':'text-rose-600'">
-                {{ priceInsight.trend7d<0?'↓':'↑' }} {{ Math.abs(priceInsight.trend7d) }}% за 7 дней
+              <div class="text-xl font-semibold text-slate-900 mt-1 truncate">{{ currentSlide.title }}</div>
+              <div class="mt-1 text-emerald-600 font-semibold">{{ currentSlide.price }} ₽
+                <span class="text-slate-400 font-normal">(город: {{ currentSlide.cityAvg }} ₽)</span>
               </div>
+              <div class="text-xs text-slate-500 mt-1">Автопереключение каждые 4 сек</div>
             </div>
             <div class="w-40 h-20">
               <svg viewBox="0 0 100 50" class="w-full h-full text-emerald-500">
-                <polyline fill="none" stroke="currentColor" stroke-width="2" :points="sparkPoints" />
+                <polyline fill="none" stroke="currentColor" stroke-width="2" :points="currentSlide.spark" />
               </svg>
             </div>
           </div>
+          <!-- Активность (кратко) -->
           <div class="rounded-lg border bg-white p-4">
             <div class="flex items-center justify-between">
               <div class="text-sm text-slate-500">Активность</div>
@@ -60,7 +61,7 @@
         </div>
       </div>
 
-      <!-- Товары магазина (реальные данные) -->
+      <!-- Товары магазина -->
       <div class="space-y-3">
         <h2 class="text-lg font-semibold">Товары магазина</h2>
         <div class="rounded-lg border bg-white p-4">
@@ -91,6 +92,7 @@
           <div v-if="storeItems.length===0" class="p-8 text-center text-slate-500">Нет товаров</div>
         </div>
       </div>
+
     </div>
 
     <!-- Сайдбар -->
@@ -99,19 +101,6 @@
         <h2 class="text-lg font-semibold mb-3">На карте</h2>
         <div class="rounded-lg border bg-[linear-gradient(180deg,#f5f7fb,#eef2f7)] h-64 flex items-center justify-center text-slate-400">
           Карта (заглушка)
-        </div>
-      </div>
-      <div>
-        <h2 class="text-lg font-semibold mb-3">Heatmap по часам (7д)</h2>
-        <div class="rounded-lg border bg-white p-3 overflow-auto">
-          <div class="grid" :style="{gridTemplateColumns: '40px repeat(24, 1fr)'}">
-            <div></div>
-            <div v-for="h in 24" :key="h" class="text-[10px] text-slate-500 text-center">{{ h-1 }}</div>
-            <template v-for="(row,d) in heatmap" :key="d">
-              <div class="text-[11px] text-slate-600 pr-1 text-right flex items-center">{{ days[d] }}</div>
-              <div v-for="(v,h) in row" :key="h" class="h-4 m-[2px] rounded" :title="`${days[d]} ${h}:00 — ${v}`" :style="{ background: color(v) }"></div>
-            </template>
-          </div>
         </div>
       </div>
       <div>
@@ -129,8 +118,8 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, computed } from 'vue';
-import { useRoute } from 'vue-router';
+import { onMounted, ref, computed, onUnmounted } from 'vue';
+import { useRoute, RouterLink } from 'vue-router';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 const route = useRoute();
@@ -165,7 +154,7 @@ function toAbs(u?: string) {
   return src.startsWith('/') ? `${API}${src}` : src;
 }
 
-// Демо-аналитика
+// KPI (заглушки)
 const kpis = [
   { title: 'Средний чек', value: '480 ₽' },
   { title: 'Чеков за 7 дней', value: '12' },
@@ -173,27 +162,36 @@ const kpis = [
   { title: 'Уникальных товаров', value: '35' },
 ];
 
-const priceInsight = {
-  product: { label: 'Burn PM Zero', price: 169 },
-  cityAvg: 175,
-  trend7d: -2,
-  spark: [165, 169, 172, 170, 169, 168, 169],
-};
-
-const sparkPoints = computed(() => {
-  const pts = priceInsight.spark;
-  return pts.map((v, i) => `${(i/(pts.length-1))*100},${50-((v-165)/(10))*50}`).join(' ');
-});
-
-const days = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
-function rnd(seed:number){ let x=seed; return ()=> (x = (x*9301+49297)%233280)/233280 }
-const R = rnd(42);
-const heatmap:number[][] = days.map((_)=> Array.from({length:24},()=> Math.floor(R()*5)));
-function color(v:number){ return `hsl(160 70% ${90 - v*12}%)`; }
+// Слайды по товарам
+function idOf(x:any){ return typeof x === 'string' ? x : x?.$oid; }
+function makeSpark(base:number, seedStr:string){
+  let seed = 0; for (let i=0;i<seedStr.length;i++) seed = (seed*31 + seedStr.charCodeAt(i))>>>0;
+  function rnd(){ seed = (1103515245*seed + 12345)>>>0; return (seed/0xffffffff); }
+  const pts:number[] = Array.from({length: 12}, ()=> base + Math.round((rnd()-0.5)*6));
+  const min = Math.min(...pts), max = Math.max(...pts);
+  const range = Math.max(1, max-min);
+  return pts.map((v,i)=> `${(i/(pts.length-1))*100},${50-((v-min)/range)*50}`).join(' ');
+}
+const slides = computed(()=> storeItems.value.map((it:any)=> ({
+  key: it.product_id,
+  title: it.product?.title || it.product_id,
+  image_url: it.product?.image_url,
+  price: Number(it.price) || 0,
+  cityAvg: Math.round((Number(it.price)||0)*1.04),
+  spark: makeSpark(Number(it.price)||0, String(it.product_id)),
+})));
+const slideIndex = ref(0);
+const currentSlide = computed(()=> slides.value.length ? slides.value[slideIndex.value % slides.value.length] : { title: 'Нет данных', image_url: '', price: 0, cityAvg: 0, spark: '' });
+let slideTimer: any = null;
+function startSlides(){
+  if (slideTimer) clearInterval(slideTimer);
+  if (slides.value.length===0) return;
+  slideTimer = setInterval(()=> { slideIndex.value = (slideIndex.value + 1) % slides.value.length; }, 4000);
+}
+onMounted(()=> startSlides());
+onUnmounted(()=> { if (slideTimer) clearInterval(slideTimer); });
 
 // Store items logic
-function idOf(x:any){ return typeof x === 'string' ? x : x?.$oid; }
-
 async function loadProducts(){
   const res = await fetch(`${API}/products`);
   if (res.ok){
@@ -210,6 +208,7 @@ async function loadStoreItems(){
     const map: Record<string, number> = {};
     for (const it of storeItems.value){ map[it.key] = Number(it.price) || 0; }
     priceEdit.value = map;
+    startSlides();
   }
 }
 
@@ -256,3 +255,4 @@ async function loadActivities(){
 }
 onMounted(loadActivities);
 </script>
+
