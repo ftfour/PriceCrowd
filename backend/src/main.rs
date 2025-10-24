@@ -136,6 +136,8 @@ struct StoreActivity {
     price: Option<f64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     product_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    store_name: Option<String>,
 }
 
 #[tokio::main]
@@ -186,6 +188,7 @@ async fn main() -> anyhow::Result<()> {
         .route("/stores/:id/products/:product_id", put(update_store_product).delete(remove_store_product))
         .route("/stores/:id/activities", get(list_store_activities))
         .route("/upload", post(upload_file))
+        .route("/activities", get(list_all_activities))
         .nest_service("/uploads", static_service)
         .with_state(state)
         .layer(cors);
@@ -515,7 +518,9 @@ async fn add_store_product(State(state): State<AppState>, Path(id): Path<String>
                 Ok(prod_opt) => {
                     let product_name = prod_opt.as_ref().map(|p| p.title.clone());
                     let kind = if res.upserted_id.is_some() { "item_added" } else { "price_updated" };
-                    let activity = StoreActivity { id: None, store_id: store_oid, product_id: Some(product_oid), kind: kind.to_string(), ts_ms: now_ms, price: Some(payload.price), product_name };
+                    // fetch store name
+                    let store_name = match state.stores.find_one(doc!{"_id": store_oid}, None).await { Ok(opt)=> opt.map(|s| s.name), Err(_)=> None };
+                    let activity = StoreActivity { id: None, store_id: store_oid, product_id: Some(product_oid), kind: kind.to_string(), ts_ms: now_ms, price: Some(payload.price), product_name, store_name };
                     let _ = state.store_activities.insert_one(activity, None).await;
                     let resp = serde_json::json!({"product_id": product_oid, "price": payload.price, "product": prod_opt});
                     (StatusCode::CREATED, Json(resp)).into_response()
@@ -539,7 +544,8 @@ async fn update_store_product(State(state): State<AppState>, Path((id, product_i
             let now_ms = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_millis() as i64;
             // fetch product name for activity
             let product_name = match state.products.find_one(doc!{"_id": product_oid}, None).await { Ok(opt)=> opt.map(|p| p.title), Err(_)=> None };
-            let activity = StoreActivity { id: None, store_id: store_oid, product_id: Some(product_oid), kind: "price_updated".to_string(), ts_ms: now_ms, price: Some(body.price), product_name };
+            let store_name = match state.stores.find_one(doc!{"_id": store_oid}, None).await { Ok(opt)=> opt.map(|s| s.name), Err(_)=> None };
+            let activity = StoreActivity { id: None, store_id: store_oid, product_id: Some(product_oid), kind: "price_updated".to_string(), ts_ms: now_ms, price: Some(body.price), product_name, store_name };
             let _ = state.store_activities.insert_one(activity, None).await;
             StatusCode::NO_CONTENT.into_response()
         },
@@ -555,7 +561,8 @@ async fn remove_store_product(State(state): State<AppState>, Path((id, product_i
         Ok(res) if res.deleted_count == 1 => {
             let now_ms = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_millis() as i64;
             let product_name = match state.products.find_one(doc!{"_id": product_oid}, None).await { Ok(opt)=> opt.map(|p| p.title), Err(_)=> None };
-            let activity = StoreActivity { id: None, store_id: store_oid, product_id: Some(product_oid), kind: "item_removed".to_string(), ts_ms: now_ms, price: None, product_name };
+            let store_name = match state.stores.find_one(doc!{"_id": store_oid}, None).await { Ok(opt)=> opt.map(|s| s.name), Err(_)=> None };
+            let activity = StoreActivity { id: None, store_id: store_oid, product_id: Some(product_oid), kind: "item_removed".to_string(), ts_ms: now_ms, price: None, product_name, store_name };
             let _ = state.store_activities.insert_one(activity, None).await;
             StatusCode::NO_CONTENT.into_response()
         },
@@ -570,6 +577,17 @@ async fn list_store_activities(State(state): State<AppState>, Path(id): Path<Str
     // optional query param limit
     // Axum 0.7 extract query easily; for brevity, use default 20
     let mut cursor = match state.store_activities.find(doc!{"store_id": store_oid}, mongodb::options::FindOptions::builder().sort(doc!{"ts_ms": -1}).limit(50).build()).await {
+        Ok(c)=>c,
+        Err(e)=> { error!(?e, "query activities failed"); return StatusCode::INTERNAL_SERVER_ERROR.into_response(); }
+    };
+    let mut items: Vec<StoreActivity> = Vec::new();
+    while let Some(res) = cursor.next().await { match res { Ok(doc)=> items.push(doc), Err(e)=> { error!(?e, "cursor error"); return StatusCode::INTERNAL_SERVER_ERROR.into_response(); } } }
+    (StatusCode::OK, Json(items)).into_response()
+}
+
+// List all activities
+async fn list_all_activities(State(state): State<AppState>) -> impl IntoResponse {
+    let mut cursor = match state.store_activities.find(None, mongodb::options::FindOptions::builder().sort(doc!{"ts_ms": -1}).limit(50).build()).await {
         Ok(c)=>c,
         Err(e)=> { error!(?e, "query activities failed"); return StatusCode::INTERNAL_SERVER_ERROR.into_response(); }
     };

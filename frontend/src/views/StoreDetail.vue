@@ -251,7 +251,7 @@ async function loadActivities(){
   const res = await fetch(`${API}/stores/${id}/activities`);
   if (res.ok){
     const arr = await res.json();
-    activities.value = arr.map((x:any)=> ({ key: (typeof x._id==='string'? x._id : x._id?.$oid) || `${x.ts_ms}`, product_id: (typeof x.product_id==='string'? x.product_id : x.product_id?.$oid) || null, kind: x.kind, ts_ms: x.ts_ms, price: x.price, product_name: x.product_name }));
+    activities.value = arr.map((x:any)=> ({ key: (typeof x._id==='string'? x._id : x._id?.$oid) || `${x.ts_ms}`, product_id: (typeof x.product_id==='string'? x.product_id : x.product_id?.$oid) || null, kind: x.kind, ts_ms: x.ts_ms, price: x.price, product_name: x.product_name, store_name: x.store_name }));
   }
 }
 onMounted(loadActivities);
