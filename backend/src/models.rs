@@ -121,3 +121,25 @@ pub struct StoreItemCreate { pub product_id: String, pub price: f64 }
 #[derive(Debug, Serialize, Deserialize)]
 pub struct StoreItemUpdate { pub price: f64 }
 
+// Auth
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct User {
+    #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
+    pub id: Option<ObjectId>,
+    pub username: String,
+    pub password_hash: String,
+    pub role: String, // "admin" | "user"
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct LoginRequest { pub username: String, pub password: String }
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct LoginResponse { pub token: String, pub username: String, pub role: String }
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Claims {
+    pub sub: String,
+    pub role: String,
+    pub exp: i64,
+}
