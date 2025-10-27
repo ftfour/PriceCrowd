@@ -21,39 +21,50 @@
             <div class="text-xl font-semibold text-slate-900 mt-1">{{ k.value }}</div>
           </div>
         </div>
+
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <!-- Слайд: Сначала средняя по городу, затем график, затем карточка товара -->
+          <!-- Слайд: сравнение, график, товар -->
           <div class="rounded-lg border bg-white p-3 sm:p-4 space-y-3">
-            <!-- 1) Средняя цена по городу -->
+            <!-- Средняя цена по городу -->
             <div class="flex items-baseline justify-between gap-3">
               <div class="text-sm sm:text-base text-slate-600">Средняя цена по городу</div>
-              <div class="text-lg sm:text-2xl font-semibold text-emerald-600">{{ Number(currentSlide.cityAvg).toLocaleString('ru-RU') }} ₽</div>
+              <div class="text-lg sm:text-2xl font-semibold text-emerald-600">
+                {{ Number(currentSlide.cityAvg).toLocaleString('ru-RU') }} ₽
+              </div>
             </div>
 
-            <!-- 2) График (понятный) -->
+            <!-- График -->
             <div>
               <div class="text-[11px] sm:text-xs text-slate-500 mb-1">График цены (в этом магазине)</div>
               <div class="w-full h-16 sm:h-20">
-                <svg viewBox="0 0 100 50" class="w-full h-full text-emerald-500">
-                  <polyline fill="none" stroke="currentColor" stroke-width="2" :points="currentSlide.spark" />
+                <svg viewBox="0 0 100 50" class="w-full h-full">
+                  <polyline fill="none" stroke="#94a3b8" stroke-width="2" :points="currentSlide.citySpark || ''" />
+                  <polyline fill="none" stroke="#10b981" stroke-width="2" :points="currentSlide.spark" />
                 </svg>
               </div>
             </div>
 
-            <!-- 3) Карточка товара -->
+            <!-- Карточка товара -->
             <div class="grid grid-cols-[56px_1fr_auto] sm:grid-cols-[64px_1fr_auto_auto] items-center gap-3">
               <div class="h-14 w-14 sm:h-16 sm:w-16 rounded-xl bg-slate-50 border flex items-center justify-center overflow-hidden">
                 <img :src="toAbs(currentSlide.image_url)" alt="prod" class="max-h-12 sm:max-h-14 object-contain" />
               </div>
               <div class="min-w-0">
                 <div class="text-base sm:text-lg font-semibold text-slate-900 truncate">{{ currentSlide.title }}</div>
-                <div v-if="currentSlide.cheapest && currentSlide.cheapest.store_id && Number(currentSlide.cheapest.price) < Number(currentSlide.price)" class="text-[11px] sm:text-xs mt-1 truncate">
+                <div
+                  v-if="currentSlide.cheapest && currentSlide.cheapest.store_id && Number(currentSlide.cheapest.price) < Number(currentSlide.price)"
+                  class="text-[11px] sm:text-xs mt-1 truncate"
+                >
                   Дешевле в
-                  <RouterLink :to="`/stores/${currentSlide.cheapest.store_id}`" class="text-blue-600 hover:underline">{{ currentSlide.cheapest.store_name || 'другом магазине' }}</RouterLink>
+                  <RouterLink :to="`/stores/${currentSlide.cheapest.store_id}`" class="text-blue-600 hover:underline">
+                    {{ currentSlide.cheapest.store_name || 'другом магазине' }}
+                  </RouterLink>
                   — {{ Number(currentSlide.cheapest.price).toLocaleString('ru-RU') }} ₽
                 </div>
               </div>
-              <div class="text-emerald-600 font-semibold text-sm sm:text-base">{{ Number(currentSlide.price).toLocaleString('ru-RU') }} ₽</div>
+              <div class="text-emerald-600 font-semibold text-sm sm:text-base">
+                {{ Number(currentSlide.price).toLocaleString('ru-RU') }} ₽
+              </div>
               <div class="hidden sm:flex flex-col gap-1 ml-1">
                 <button @click="prevSlide" title="Назад" class="h-7 w-7 rounded border text-slate-600">‹</button>
                 <button @click="nextSlide" title="Вперёд" class="h-7 w-7 rounded border text-slate-600">›</button>
@@ -64,19 +75,24 @@
               <button @click="nextSlide" title="Вперёд" class="h-8 px-3 rounded border text-slate-600">›</button>
             </div>
           </div>
-          <!-- Активность (кратко) -->
+
+          <!-- Активность -->
           <div class="rounded-lg border bg-white p-4">
             <div class="flex items-center justify-between">
               <div class="text-sm text-slate-500">Активность</div>
               <RouterLink :to="`/stores/${id}/activity`" class="text-sm text-blue-600 hover:underline">Вся активность</RouterLink>
             </div>
             <ul class="mt-2 text-sm text-slate-700 space-y-2">
-              <li v-for="a in activities.slice(0,5)" :key="a.key" class="flex items-start justify-between gap-2">
+              <li v-for="a in activities.slice(0,4)" :key="a.key" class="flex items-start justify-between gap-2">
                 <div class="flex-1 min-w-0">
                   <div class="font-medium text-slate-800">{{ activityTitle(a) }}</div>
                   <div class="text-xs text-slate-500">{{ formatDate(a.ts_ms) }}</div>
                 </div>
-                <RouterLink v-if="a.product_id" :to="`/products/${a.product_id}`" class="shrink-0 text-xs text-blue-600 hover:underline">Товар</RouterLink>
+                <RouterLink
+                  v-if="a.product_id"
+                  :to="`/products/${a.product_id}`"
+                  class="shrink-0 text-xs text-blue-600 hover:underline"
+                >Товар</RouterLink>
               </li>
               <li v-if="activities.length===0" class="text-slate-500 text-sm">Событий пока нет</li>
             </ul>
@@ -88,7 +104,12 @@
       <div class="space-y-3">
         <h2 class="text-lg font-semibold">Товары магазина</h2>
         <div class="rounded-lg border bg-white p-4">
-          <form @submit.prevent="addItem" class="flex flex-wrap items-center gap-3">
+          <div class="flex justify-end mb-2">
+            <button @click="editMode=!editMode" class="text-xs border rounded px-2 py-1">
+              {{ editMode ? 'Готово' : 'Редактировать список товаров' }}
+            </button>
+          </div>
+          <form v-if="editMode" @submit.prevent="addItem" class="flex flex-wrap items-center gap-3">
             <select v-model="newItem.product_id" class="h-9 border rounded px-2 text-sm min-w-[240px]">
               <option value="" disabled>Выберите товар</option>
               <option v-for="p in productsForSelect" :key="p._id" :value="p._id">{{ p.title }}</option>
@@ -97,16 +118,19 @@
             <button type="submit" class="h-9 px-3 rounded bg-blue-600 text-white text-sm">Добавить</button>
           </form>
         </div>
+
         <div class="rounded-lg border bg-white divide-y">
           <div v-for="it in storeItems" :key="it.key" class="p-4 flex items-center gap-4">
             <div class="h-12 w-12 rounded bg-slate-50 border flex items-center justify-center overflow-hidden">
               <img :src="toAbs(it.product?.image_url)" class="max-h-10 object-contain" alt="" />
             </div>
             <div class="min-w-0 flex-1">
-              <RouterLink :to="`/products/${it.product_id}`" class="font-medium text-slate-900 hover:underline truncate block">{{ it.product?.title || it.product_id }}</RouterLink>
+              <RouterLink :to="`/products/${it.product_id}`" class="font-medium text-slate-900 hover:underline truncate block">
+                {{ it.product?.title || it.product_id }}
+              </RouterLink>
               <div class="text-xs text-slate-500 break-all">{{ it.product_id }}</div>
             </div>
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-2" v-if="editMode">
               <input v-model.number="priceEdit[it.key]" type="number" step="0.01" min="0" class="h-9 w-24 border rounded px-2 text-sm" />
               <button @click="savePrice(it)" class="h-9 px-3 rounded border text-sm">Сохранить</button>
               <button @click="removeItem(it)" class="h-9 px-3 rounded bg-red-600 text-white text-sm">Удалить</button>
@@ -115,7 +139,6 @@
           <div v-if="storeItems.length===0" class="p-8 text-center text-slate-500">Нет товаров</div>
         </div>
       </div>
-
     </div>
 
     <!-- Сайдбар -->
@@ -131,30 +154,32 @@
         <div class="rounded-lg border bg-white p-4 text-sm text-slate-700 space-y-2">
           <div><span class="text-slate-500">Часы:</span> Пн-Вс 09:00–22:00</div>
           <div><span class="text-slate-500">Тел.:</span> +7 (411) xxx-xx-xx</div>
-          <div><span class="text-slate-500">Статус:</span> Открыто</div>
+          <div><span class="text-slate-500">Статус:</span> открыт</div>
           <div class="text-slate-400 text-xs">Информация носит ознакомительный характер</div>
         </div>
       </div>
     </aside>
   </div>
+
   <div v-else class="text-slate-500">Загрузка...</div>
 </template>
 
 <script setup lang="ts">
 import { onMounted, ref, computed } from 'vue';
 import { useRoute, RouterLink } from 'vue-router';
-
-const API = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+import { API, authHeaders } from '../api';
 const route = useRoute();
 const id = route.params.id as string;
 const placeholderUrl = '/placeholder-can.svg';
 
 const store = ref<any | null>(null);
+const editMode = ref(false);
 const allProducts = ref<any[]>([]);
 const storeItems = ref<any[]>([]);
 const newItem = ref<{ product_id: string; price: number | null }>({ product_id: '', price: null });
 const priceEdit = ref<Record<string, number>>({});
 
+// загрузка магазина
 async function load() {
   const res = await fetch(`${API}/stores/${id}`);
   if (res.ok) {
@@ -168,7 +193,6 @@ async function load() {
     };
   }
 }
-
 onMounted(load);
 
 function toAbs(u?: string) {
@@ -177,7 +201,7 @@ function toAbs(u?: string) {
   return src.startsWith('/') ? `${API}${src}` : src;
 }
 
-// KPI (заглушки)
+// KPI — заглушка
 const kpis = [
   { title: 'Средний чек', value: '480 ₽' },
   { title: 'Чеков за 7 дней', value: '12' },
@@ -185,7 +209,7 @@ const kpis = [
   { title: 'Уникальных товаров', value: '35' },
 ];
 
-// Слайды по товарам (реальные данные)
+// вспомогательные функции
 function idOf(x:any){ return typeof x === 'string' ? x : x?.$oid; }
 function makeSparkFromHistory(hist: Array<{ts_ms:number, price:number}>){
   if (!hist || hist.length===0) return '';
@@ -194,13 +218,17 @@ function makeSparkFromHistory(hist: Array<{ts_ms:number, price:number}>){
   const range = Math.max(1, max - min);
   return vals.map((v,i)=> `${(i/(vals.length-1))*100},${50-((v-min)/range)*50}`).join(' ');
 }
+
 const slides = ref<any[]>([]);
 const slideIndex = ref(0);
-const currentSlide = computed(()=> slides.value.length ? slides.value[slideIndex.value % slides.value.length] : { title: 'Нет данных', image_url: '', price: 0, cityAvg: 0, spark: '', cheapest: null });
+const currentSlide = computed(()=> slides.value.length
+  ? slides.value[slideIndex.value % slides.value.length]
+  : { title: 'Нет данных', image_url: '', price: 0, cityAvg: 0, spark: '', cheapest: null }
+);
 function prevSlide(){ if (slides.value.length) slideIndex.value = (slideIndex.value - 1 + slides.value.length) % slides.value.length; }
 function nextSlide(){ if (slides.value.length) slideIndex.value = (slideIndex.value + 1) % slides.value.length; }
 
-// Store items logic
+// продукты и цены
 async function loadProducts(){
   const res = await fetch(`${API}/products`);
   if (res.ok){
@@ -213,12 +241,18 @@ async function loadStoreItems(){
   const res = await fetch(`${API}/stores/${id}/products`);
   if (res.ok){
     const arr = await res.json();
-    storeItems.value = arr.map((it:any)=> ({ key: `${idOf(it._id)||idOf(it.product_id)}`, product_id: idOf(it.product_id), price: it.price, product: it.product ? { _id: idOf(it.product._id), title: it.product.title, image_url: it.product.image_url } : null }));
+    storeItems.value = arr.map((it:any)=> ({
+      key: `${idOf(it._id)||idOf(it.product_id)}`,
+      product_id: idOf(it.product_id),
+      price: it.price,
+      product: it.product ? { _id: idOf(it.product._id), title: it.product.title, image_url: it.product.image_url } : null
+    }));
     const map: Record<string, number> = {};
     for (const it of storeItems.value){ map[it.key] = Number(it.price) || 0; }
     priceEdit.value = map;
   }
-  // Load insights (city avg, cheapest, history) and build slides
+
+  // инсайты
   const ins = await fetch(`${API}/stores/${id}/products/insights`);
   if (ins.ok){
     const data = await ins.json();
@@ -241,38 +275,55 @@ const productsForSelect = computed(()=> {
 
 async function addItem(){
   if (!newItem.value.product_id || newItem.value.price==null) return;
-  await fetch(`${API}/stores/${id}/products`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ product_id: newItem.value.product_id, price: Number(newItem.value.price) }) });
+  await fetch(`${API}/stores/${id}/products`, {
+    method: 'POST',
+    headers: authHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ product_id: newItem.value.product_id, price: Number(newItem.value.price) })
+  });
   newItem.value = { product_id: '', price: null };
   await loadStoreItems();
 }
 
 async function savePrice(it:any){
   const price = Number(priceEdit.value[it.key]);
-  await fetch(`${API}/stores/${id}/products/${it.product_id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ price }) });
+  await fetch(`${API}/stores/${id}/products/${it.product_id}`, {
+    method: 'PUT',
+    headers: authHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ price })
+  });
   await loadStoreItems();
 }
 
 async function removeItem(it:any){
-  await fetch(`${API}/stores/${id}/products/${it.product_id}`, { method: 'DELETE' });
+  await fetch(`${API}/stores/${id}/products/${it.product_id}`, { method: 'DELETE', headers: authHeaders() });
   await loadStoreItems();
 }
 
 onMounted(async()=>{ await loadProducts(); await loadStoreItems(); });
 
-// Activities
+// Активность
 const activities = ref<any[]>([]);
 function formatDate(ms:number){ const d = new Date(ms); return d.toLocaleString(); }
 function activityTitle(a:any){
   if (a.kind==='item_added') return `Добавлен товар ${a.product_name || ''}`.trim();
   if (a.kind==='price_updated' || a.kind==='price_set') return `Обновлена цена на товар ${a.product_name || ''}`.trim();
-  if (a.kind==='item_removed') return `Товар удален ${a.product_name || ''}`.trim();
+  if (a.kind==='item_removed') return `Товар удалён ${a.product_name || ''}`.trim();
   return 'Событие';
 }
+
 async function loadActivities(){
   const res = await fetch(`${API}/stores/${id}/activities`);
   if (res.ok){
     const arr = await res.json();
-    activities.value = arr.map((x:any)=> ({ key: (typeof x._id==='string'? x._id : x._id?.$oid) || `${x.ts_ms}`, product_id: (typeof x.product_id==='string'? x.product_id : x.product_id?.$oid) || null, kind: x.kind, ts_ms: x.ts_ms, price: x.price, product_name: x.product_name, store_name: x.store_name }));
+    activities.value = arr.map((x:any)=> ({
+      key: (typeof x._id==='string'? x._id : x._id?.$oid) || `${x.ts_ms}`,
+      product_id: (typeof x.product_id==='string'? x.product_id : x.product_id?.$oid) || null,
+      kind: x.kind,
+      ts_ms: x.ts_ms,
+      price: x.price,
+      product_name: x.product_name,
+      store_name: x.store_name
+    }));
   }
 }
 onMounted(loadActivities);

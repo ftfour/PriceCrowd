@@ -16,13 +16,39 @@
         </div>
       </div>
     </div>
+
+    <!-- Где купить и цены -->
+    <div v-if="insights" class="space-y-4">
+      <h2 class="text-lg font-semibold">Где купить и цена</h2>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div v-for="(k,i) in kpis" :key="i" class="rounded-lg border bg-white p-4">
+          <div class="text-sm text-slate-500">{{ k.title }}</div>
+          <div class="text-xl font-semibold text-slate-900 mt-1">{{ k.value }}</div>
+        </div>
+      </div>
+
+      <div class="rounded-lg border bg-white divide-y">
+        <div v-for="s in (insights?.stores||[]).slice().sort((a:any,b:any)=> Number(a.price)-Number(b.price))" :key="String(s.store_id)" class="p-4 flex flex-col gap-2">
+          <div class="flex items-center justify-between gap-3">
+            <RouterLink :to="`/stores/${typeof s.store_id==='string'? s.store_id : s.store_id?.$oid}`" class="font-medium text-slate-900 hover:underline">{{ s.store_name || 'Магазин' }}</RouterLink>
+            <div class="text-emerald-600 font-semibold">{{ Number(s.price).toLocaleString('ru-RU') }} ₽</div>
+          </div>
+          <div class="w-full h-16">
+            <svg viewBox="0 0 100 50" class="w-full h-full text-emerald-500">
+              <polyline fill="none" stroke="currentColor" stroke-width="2" :points="makeSparkFromHistory(s.history||[])" />
+            </svg>
+          </div>
+        </div>
+        <div v-if="!insights?.stores || !insights.stores.length" class="p-8 text-center text-slate-500">Пока нет данных по магазинам</div>
+      </div>
+    </div>
   </section>
   <div v-else class="text-slate-500">Загрузка...</div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
-import { useRoute } from 'vue-router';
+import { onMounted, ref, computed } from 'vue';
+import { useRoute, RouterLink } from 'vue-router';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 const route = useRoute();
@@ -31,6 +57,7 @@ const placeholderUrl = '/placeholder-can.svg';
 
 const product = ref<any | null>(null);
 const categories = ref<any[]>([]);
+const insights = ref<any | null>(null);
 
 async function load() {
   const res = await fetch(`${API}/products/${id}`);
@@ -46,6 +73,9 @@ async function load() {
   }
   const resCats = await fetch(`${API}/categories`);
   if (resCats.ok) categories.value = await resCats.json();
+
+  const resIns = await fetch(`${API}/products/${id}/insights`);
+  if (resIns.ok) insights.value = await resIns.json();
 }
 
 onMounted(load);
@@ -59,6 +89,25 @@ function toAbs(u?: string) {
 function categoryName(id: string) {
   const c = categories.value.find((x:any)=> (typeof x._id === 'string' ? x._id : x._id?.$oid) === id);
   return c?.name || id;
+}
+
+const kpis = computed(()=> {
+  const s = insights.value;
+  if (!s) return [] as any[];
+  const count = Array.isArray(s.stores) ? s.stores.length : 0;
+  const cityAvg = s.city_avg ? Math.round(Number(s.city_avg)) : null;
+  return [
+    { title: 'В магазинах', value: String(count) },
+    { title: 'Средняя по городу', value: cityAvg!=null ? `${cityAvg.toLocaleString('ru-RU')} ₽` : '—' },
+  ];
+});
+
+function makeSparkFromHistory(hist: Array<{ts_ms:number, price:number}>){
+  if (!hist || hist.length===0) return '';
+  const vals = hist.map(h=> Number(h.price));
+  const min = Math.min(...vals), max = Math.max(...vals);
+  const range = Math.max(1, max-min);
+  return vals.map((v,i)=> `${(i/(vals.length-1))*100},${50-((v-min)/range)*50}`).join(' ');
 }
 </script>
 

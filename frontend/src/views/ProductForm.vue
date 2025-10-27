@@ -56,8 +56,9 @@
 <script setup lang="ts">
 import { onMounted, ref, computed } from 'vue';
 import { useRoute, useRouter, RouterLink } from 'vue-router';
+import { authHeaders } from '../api';
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+import { API } from '../api';
 const route = useRoute();
 const router = useRouter();
 const id = route.params.id as string | undefined;
@@ -87,7 +88,7 @@ async function uploadIfNeeded(): Promise<string | undefined> {
   if (!file.value) return undefined;
   const data = new FormData();
   data.append('file', file.value);
-  const res = await fetch(`${API}/upload`, { method: 'POST', body: data });
+  const res = await fetch(`${API}/upload`, { method: 'POST', body: data, headers: authHeaders() });
   if (!res.ok) throw new Error('Upload failed');
   const json = await res.json();
   return json.url as string;
@@ -100,10 +101,10 @@ async function onSubmit() {
     const payload: any = { ...form.value, category_ids: selectedCats.value };
     if (image_url) payload.image_url = image_url;
     if (isEdit.value && id) {
-      await fetch(`${API}/products/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      await fetch(`${API}/products/${id}`, { method: 'PUT', headers: authHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify(payload) });
       await router.push(`/products/${id}`);
     } else {
-      const res = await fetch(`${API}/products`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      const res = await fetch(`${API}/products`, { method: 'POST', headers: authHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify(payload) });
       const created = await res.json();
       const newId = typeof created._id === 'string' ? created._id : created._id?.$oid;
       await router.push(`/products/${newId}`);
@@ -156,4 +157,3 @@ function removeCat(id: string){
 
 onMounted(async()=>{ await loadCats(); await loadIfEdit(); });
 </script>
-

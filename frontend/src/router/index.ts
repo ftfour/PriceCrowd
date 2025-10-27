@@ -12,6 +12,7 @@ const StoreActivity = () => import('../views/StoreActivity.vue');
 const Cart = () => import('../views/Cart.vue');
 const Categories = () => import('../views/Categories.vue');
 const CategoryForm = () => import('../views/CategoryForm.vue');
+const Login = () => import('../views/Login.vue');
 
 const router = createRouter({
   history: createWebHistory(),
@@ -31,6 +32,7 @@ const router = createRouter({
     { path: '/categories', name: 'categories', component: Categories },
     { path: '/categories/new', name: 'category-new', component: CategoryForm },
     { path: '/categories/:id/edit', name: 'category-edit', component: CategoryForm },
+    { path: '/login', name: 'login', component: Login },
     { path: '/:pathMatch(.*)*', redirect: '/' },
   ],
   scrollBehavior() {

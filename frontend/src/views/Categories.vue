@@ -45,9 +45,10 @@
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
+import { authHeaders } from '../api';
 import CategoryTree from '../components/CategoryTree.vue';
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+import { API } from '../api';
 const categories = ref<any[]>([]);
 
 function mapId(x:any){ return (typeof x === 'string' ? x : x?.$oid); }
@@ -66,7 +67,7 @@ function nameById(id:string){
 }
 
 async function remove(c:any){
-  await fetch(`${API}/categories/${c._id_str}`, { method: 'DELETE' });
+  await fetch(`${API}/categories/${c._id_str}`, { method: 'DELETE', headers: authHeaders() });
   await load();
 }
 

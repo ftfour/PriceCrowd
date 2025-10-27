@@ -40,7 +40,7 @@ import { computed, onMounted, ref } from 'vue';
 
 type Product = { _id: string; title: string; desc: string; image_url?: string; category_ids?: string[] };
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+import { API } from '../api';
 const products = ref<Product[]>([]);
 const categories = ref<any[]>([]);
 const query = ref('');
@@ -75,8 +75,10 @@ async function fetchProducts() {
   }
 }
 
+import { authHeaders } from '../api';
+
 async function remove(p: Product) {
-  await fetch(`${API}/products/${p._id}`, { method: 'DELETE' });
+  await fetch(`${API}/products/${p._id}`, { method: 'DELETE', headers: authHeaders() });
   await fetchProducts();
 }
 
@@ -96,4 +98,3 @@ function categoryName(id: string) {
   overflow: hidden;
 }
 </style>
-

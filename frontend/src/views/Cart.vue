@@ -1,17 +1,35 @@
 <template>
   <section class="grid grid-cols-12 gap-6">
-    <!-- Товары с категориями -->
     <div class="col-span-12 lg:col-span-9 space-y-4">
       <h1 class="text-2xl font-semibold">Корзина</h1>
+
       <div class="rounded-lg border bg-white p-4">
         <div class="flex items-center justify-between mb-3">
-          <div class="text-slate-600">Выберите товары (по категориям)</div>
+          <div class="flex items-center gap-2">
+            <button @click="viewMode='categories'" :class="btnMode('categories')" class="px-3 py-1.5 rounded border text-sm">По категориям</button>
+            <button @click="viewMode='all'" :class="btnMode('all')" class="px-3 py-1.5 rounded border text-sm">Полный список</button>
+          </div>
           <div class="text-xs text-slate-500">Отмечено: {{ selectedProducts.size }}</div>
         </div>
-        <div class="space-y-2">
-          <div v-for="node in tree" :key="node.id" class="">
+
+        <div v-if="viewMode==='categories'" class="space-y-2">
+          <div v-for="node in tree" :key="node.id">
             <CategoryNode :node="node" :products-by-cat="productsByCat" :selected-products="selectedProducts"
               :expanded="expandedCats" @toggle="toggleCat" @toggle-product="toggleProduct" />
+          </div>
+        </div>
+
+        <div v-else class="space-y-2">
+          <div class="flex items-center gap-2 mb-2">
+            <input v-model="query" placeholder="Поиск товара" class="h-9 w-full max-w-sm border rounded px-3 text-sm" />
+            <button @click="clearQuery" class="text-xs text-slate-600 border rounded px-2 py-1">Сбросить</button>
+          </div>
+          <div class="max-h-[50vh] overflow-auto space-y-1 pr-1">
+            <label v-for="p in filteredAll" :key="p._id" class="flex items-center justify-between gap-3 text-sm">
+              <span class="truncate">{{ p.title }}</span>
+              <input type="checkbox" :checked="selectedProducts.has(p._id)" @change="toggleProduct(p._id)" />
+            </label>
+            <div v-if="filteredAll.length===0" class="text-sm text-slate-400">Совпадений нет</div>
           </div>
         </div>
       </div>
@@ -24,7 +42,6 @@
         <div v-if="calcError" class="text-sm text-rose-600">{{ calcError }}</div>
       </div>
 
-      <!-- Результат расчёта -->
       <div v-if="result.items.length" class="rounded-lg border bg-white p-4 space-y-3">
         <h2 class="text-lg font-semibold">Результат</h2>
         <div class="overflow-auto">
@@ -68,7 +85,6 @@
       </div>
     </div>
 
-    <!-- Сайдбар магазинов -->
     <aside class="col-span-12 lg:col-span-3 space-y-4">
       <div class="rounded-lg border bg-white p-4">
         <div class="flex items-center justify-between mb-2">
@@ -92,21 +108,22 @@ import { RouterLink } from 'vue-router';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
-// Data
 const products = ref<any[]>([]);
 const categories = ref<any[]>([]);
 const stores = ref<any[]>([]);
 const selectedProducts = ref<Set<string>>(new Set());
 const expandedCats = ref<Set<string>>(new Set());
 const selectedStores = ref<Set<string>>(new Set());
-const storeItems = ref<Record<string, Record<string, number>>>({}); // store_id -> { product_id: price }
+const storeItems = ref<Record<string, Record<string, number>>>({});
 const storeNameById = ref<Record<string, string>>({});
 const calcError = ref<string | null>(null);
+const viewMode = ref<'categories'|'all'>('categories');
+const query = ref('');
 
-// Helpers
 function idOf(x:any){ return typeof x === 'string' ? x : x?.$oid; }
+function btnMode(mode:'categories'|'all'){ return viewMode.value===mode ? 'bg-slate-100 border-slate-300' : 'bg-white border-slate-200'; }
+function clearQuery(){ query.value=''; }
 
-// Load data
 async function loadProducts(){
   const res = await fetch(`${API}/products`);
   if (res.ok){
@@ -130,9 +147,8 @@ async function loadStores(){
   }
 }
 
-onMounted(async()=>{ await Promise.all([loadProducts(), loadCategories(), loadStores()]); });
+onMounted(async()=>{ await Promise.all([loadProducts(), loadCategories(), loadStores()]); expandedCats.value = new Set(['__all']); });
 
-// Build category tree
 const normalizedCats = computed(()=> categories.value.map(c=> ({ id: c._id, name: c.name, parents: c.parent_ids })));
 const childrenMap = computed(()=>{
   const m = new Map<string, {id:string;name:string}[]>();
@@ -144,7 +160,14 @@ const childrenMap = computed(()=>{
   for (const [k,arr] of m){ arr.sort((a,b)=> a.name.localeCompare(b.name)); m.set(k,arr); }
   return m;
 });
-const roots = computed(()=> normalizedCats.value.filter(c=> !c.parents || c.parents.length===0).map(c=> ({id:c.id,name:c.name})).sort((a,b)=> a.name.localeCompare(b.name)));
+const roots = computed(()=> {
+  const base = normalizedCats.value
+    .filter(c=> !c.parents || c.parents.length===0)
+    .map(c=> ({id:c.id,name:c.name}))
+    .sort((a,b)=> a.name.localeCompare(b.name));
+  if (base.length===0) return [{ id: '__all', name: 'Все товары' }];
+  return [{ id: '__all', name: 'Все товары' }, ...base];
+});
 const productsByCat = computed(()=>{
   const mp: Record<string, { _id:string; title:string }[]> = {};
   for (const p of products.value){
@@ -152,7 +175,12 @@ const productsByCat = computed(()=>{
       if (!mp[cid]) mp[cid]=[];
       mp[cid].push({_id:p._id, title:p.title});
     }
+    if (!p.category_ids || p.category_ids.length===0){
+      if (!mp['__uncat']) mp['__uncat']=[];
+      mp['__uncat'].push({_id:p._id, title:p.title});
+    }
   }
+  mp['__all'] = products.value.map(p=> ({ _id:p._id, title:p.title })).sort((a,b)=> a.title.localeCompare(b.title));
   for (const cid in mp){ mp[cid].sort((a,b)=> a.title.localeCompare(b.title)); }
   return mp;
 });
@@ -164,16 +192,20 @@ function buildNode(root:{id:string;name:string}){
   return n;
 }
 
-// Expand/collapse and select
+const filteredAll = computed(()=> {
+  const q = query.value.trim().toLowerCase();
+  let list = products.value.map(p=> ({ _id:p._id, title:p.title }));
+  if (q) list = list.filter(p=> p.title.toLowerCase().includes(q));
+  return list.sort((a,b)=> a.title.localeCompare(b.title));
+});
+
 function toggleCat(id:string){ const s = new Set(expandedCats.value); if (s.has(id)) s.delete(id); else s.add(id); expandedCats.value = s; }
 function toggleProduct(id:string){ const s = new Set(selectedProducts.value); if (s.has(id)) s.delete(id); else s.add(id); selectedProducts.value = s; }
 
-// Stores selection
 function toggleStore(id:string){ const s = new Set(selectedStores.value); if (s.has(id)) s.delete(id); else s.add(id); selectedStores.value = s; }
 const allStoresSelected = computed(()=> selectedStores.value.size===stores.value.length && stores.value.length>0);
 function toggleAllStores(){ if (allStoresSelected.value) selectedStores.value = new Set(); else selectedStores.value = new Set(stores.value.map((s:any)=> s._id)); }
 
-// Fetch store items for selected stores
 async function ensureStoreItemsLoaded(){
   for (const sid of selectedStores.value){
     if (storeItems.value[sid]) continue;
@@ -187,7 +219,6 @@ async function ensureStoreItemsLoaded(){
   }
 }
 
-// Calculation
 const result = ref<{ items: any[]; summary: any[]; total: number }>({ items: [], summary: [], total: 0 });
 async function calculate(){
   calcError.value = null;
@@ -197,7 +228,6 @@ async function calculate(){
   const items:any[] = [];
   const totals: Record<string, number> = {};
   for (const pid of selectedProducts.value){
-    // find cheapest among selected stores
     let best: { store_id: string|null; store_name?: string; price: number|null } = { store_id: null, price: null };
     for (const sid of selectedStores.value){
       const price = storeItems.value[sid]?.[pid];
@@ -215,7 +245,6 @@ async function calculate(){
 </script>
 
 <script lang="ts">
-// Inline component: category with products and nested categories
 import { defineComponent } from 'vue';
 export default {
   components: {
@@ -257,4 +286,3 @@ export default {
   }
 }
 </script>
-

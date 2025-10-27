@@ -29,7 +29,7 @@ const activities = ref<any[]>([]);
 function formatDate(ms:number){ const d = new Date(ms); return d.toLocaleString(); }
 function activityTitle(a:any){
   if (a.kind==='item_added') return `Доавлен товар ${a.product_name || ''} (в магазине ${a.store_name || ''})`.trim();
-  if (a.kind==='price_updated' || a.kind==='price_set') return `Обновлена цена ? ${a.product_name || ''} (в магазине ${a.store_name || ''})`.trim();
+  if (a.kind==='price_updated' || a.kind==='price_set') return `Обновлена цена ${a.product_name || ''} (в магазине ${a.store_name || ''})`.trim();
   if (a.kind==='item_removed') return `Удален товар ${a.product_name || ''} (в магазине ${a.store_name || ''})`.trim();
   return '???????';
 }
