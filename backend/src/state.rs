@@ -3,7 +3,7 @@ use mongodb::{options::ClientOptions, Client, Collection, Database};
 use tracing::info;
 use argon2::{Argon2, password_hash::{PasswordHasher, SaltString}};
 
-use crate::models::{Product, Store, Category, StoreItem, StoreActivity};
+use crate::models::{Product, Store, Category, StoreItem, StoreActivity, TelegramSettingsDoc};
 
 #[derive(Clone)]
 pub struct AppState {
@@ -12,6 +12,7 @@ pub struct AppState {
     pub categories: Collection<Category>,
     pub store_items: Collection<StoreItem>,
     pub store_activities: Collection<StoreActivity>,
+    pub telegram_settings: Collection<TelegramSettingsDoc>,
     pub jwt_secret: String,
     pub db: Database,
 }
@@ -31,11 +32,12 @@ pub async fn init_from_env() -> Result<AppState> {
     let categories: Collection<Category> = db.collection("categories");
     let store_items: Collection<StoreItem> = db.collection("store_items");
     let store_activities: Collection<StoreActivity> = db.collection("store_activities");
+    let telegram_settings: Collection<TelegramSettingsDoc> = db.collection("settings");
 
     // seed admin if configured
     seed_admin(&db, &jwt_secret).await?;
 
-    Ok(AppState { products, stores, categories, store_items, store_activities, jwt_secret, db })
+    Ok(AppState { products, stores, categories, store_items, store_activities, telegram_settings, jwt_secret, db })
 }
 
 async fn seed_admin(db: &mongodb::Database, _jwt_secret: &str) -> Result<()> {

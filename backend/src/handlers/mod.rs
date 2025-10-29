@@ -6,3 +6,4 @@ pub mod insights;
 pub mod uploads;
 pub mod activities;
 pub mod auth;
+pub mod settings;

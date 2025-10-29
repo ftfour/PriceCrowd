@@ -20,7 +20,7 @@
               <p class="mt-1 text-xs text-gray-500 break-all">ID: {{ p._id }}</p>
             </div>
             <div class="flex gap-2 shrink-0" v-if="isAuthed">
-              <RouterLink :to="`/products/${p._id}/edit`" class="rounded-md border px-3 py-1.5 text-xs">Редактировать</Router>
+              <RouterLink :to="`/products/${p._id}/edit`" class="rounded-md border px-3 py-1.5 text-xs">Редактировать</RouterLink>
               <button @click="remove(p)" class="rounded-md bg-red-600 text-white px-3 py-1.5 text-xs">Удалить</button>
             </div>
           </div>

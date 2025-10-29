@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory } from 'vue-router';
+﻿import { createRouter, createWebHistory } from 'vue-router';
 
 const Home = () => import('../views/Home.vue');
 const About = () => import('../views/About.vue');
@@ -33,6 +33,7 @@ const router = createRouter({
     { path: '/categories/new', name: 'category-new', component: CategoryForm },
     { path: '/categories/:id/edit', name: 'category-edit', component: CategoryForm },
     { path: '/login', name: 'login', component: Login },
+    { path: '/admin', name: 'admin', component: () => import('../views/Admin.vue') },
     { path: '/:pathMatch(.*)*', redirect: '/' },
   ],
   scrollBehavior() {
@@ -41,3 +42,4 @@ const router = createRouter({
 });
 
 export default router;
+

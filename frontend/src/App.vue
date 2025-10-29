@@ -10,6 +10,7 @@
           <RouterLink to="/stores" class="text-gray-700 hover:text-black">Магазины</RouterLink>
           <RouterLink to="/cart" class="text-gray-700 hover:text-black">Корзина</RouterLink>
           <RouterLink to="/about" class="text-gray-700 hover:text-black">О проекте</RouterLink>
+          <RouterLink v-if="auth.isAdmin" to="/admin" class="text-gray-700 hover:text-black">Админка</RouterLink>
         </nav>
         <div class="flex items-center gap-3 text-sm">
           <template v-if="isAuthed">
@@ -59,4 +60,3 @@ function onLogout() {
   router.push('/');
 }
 </script>
-

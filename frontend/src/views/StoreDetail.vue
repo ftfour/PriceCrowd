@@ -74,7 +74,7 @@
           </div>
 
           <!-- Список товаров -->
-          <div class="rounded-lg border bg-white p-4">
+          <div class="col-span-1 lg:col-span-2 rounded-lg border bg-white p-4">
             <div class="flex items-center justify-between">
               <div class="text-slate-600 text-sm">Товары в магазине</div>
               <div class="flex gap-2">
@@ -308,4 +308,3 @@ async function loadActivities(){
 }
 onMounted(loadActivities);
 </script>
-
