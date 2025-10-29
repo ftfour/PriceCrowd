@@ -33,12 +33,24 @@ const router = createRouter({
     { path: '/categories/new', name: 'category-new', component: CategoryForm },
     { path: '/categories/:id/edit', name: 'category-edit', component: CategoryForm },
     { path: '/login', name: 'login', component: Login },
-    { path: '/admin', name: 'admin', component: () => import('../views/Admin.vue') },
+    { path: '/admin', name: 'admin', component: () => import('../views/Admin.vue'), meta: { requiresAdmin: true } },
     { path: '/:pathMatch(.*)*', redirect: '/' },
   ],
   scrollBehavior() {
     return { top: 0 };
   },
+});
+
+// Guard: admin-only routes
+router.beforeEach((to) => {
+  const needsAdmin = to.meta && (to.meta as any).requiresAdmin;
+  if (!needsAdmin) return true;
+  const token = localStorage.getItem('token');
+  const role = localStorage.getItem('role');
+  if (!token || role !== 'admin') {
+    return { path: '/login', query: { redirect: to.fullPath } };
+  }
+  return true;
 });
 
 export default router;

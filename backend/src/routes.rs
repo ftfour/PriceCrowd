@@ -18,6 +18,7 @@ pub fn build(state: AppState, uploads_dir: String) -> Router {
     let public = Router::new()
         .route("/healthz", get(handlers::health::health))
         .route("/auth/login", post(handlers::auth::login))
+        .route("/telegram/webhook", post(crate::telegram::webhook))
         .route("/products", get(handlers::products::list_products))
         .route("/products/:id", get(handlers::products::get_product))
         .route("/products/:id/insights", get(handlers::insights::list_product_insights))

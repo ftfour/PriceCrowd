@@ -8,6 +8,7 @@ mod models;
 mod state;
 mod handlers;
 mod routes;
+mod telegram;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -30,4 +31,3 @@ async fn main() -> anyhow::Result<()> {
     axum::serve(tokio::net::TcpListener::bind(addr).await?, app).await?;
     Ok(())
 }
-
