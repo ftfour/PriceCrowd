@@ -153,7 +153,7 @@ pub async fn list_store_product_insights(State(state): State<AppState>, Path(id)
         let (title, image_url) = products_map.get(&pid).cloned().unwrap_or((pid.to_hex(), None));
         let sp = store_prices.get(&pid).cloned();
         let cavg = match (sum.get(&pid), cnt.get(&pid)) {
-            (Some(s), Some(c)) if *c > 0 => Some((*s / *c as f64)),
+            (Some(s), Some(c)) if *c > 0 => Some(*s / *c as f64),
             _ => None,
         };
         let cheap = cheapest_price.get(&pid).map(|(p, sid)| {
@@ -174,4 +174,3 @@ pub async fn list_store_product_insights(State(state): State<AppState>, Path(id)
 
     (StatusCode::OK, Json(out)).into_response()
 }
-

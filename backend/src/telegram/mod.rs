@@ -96,7 +96,7 @@ async fn get_updates(client: &reqwest::Client, token: &str, offset: i64) -> anyh
     #[derive(Deserialize)]
     struct UpdatesResp { ok: bool, #[serde(default)] result: Vec<TelegramUpdate> }
     let url = format!("https://api.telegram.org/bot{}/getUpdates", token);
-    let body = serde_json::json!({ "offset": if offset>0 { offset } else { serde_json::Value::Null }, "timeout": 20 });
+    let body = serde_json::json!({ "offset": if offset>0 { Some(offset) } else { None::<i64> }, "timeout": 20 });
     let resp = client.post(&url).json(&body).send().await?;
     let st = resp.status();
     let data: UpdatesResp = resp.json().await?;

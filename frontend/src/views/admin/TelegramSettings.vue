@@ -42,6 +42,10 @@ async function load(){
     form.webhook_url = data.webhook_url || '';
     form.enabled = !!data.enabled;
     form.webhook_enabled = !!data.webhook_enabled;
+  } else {
+    const t = await res.text().catch(()=> '');
+    msg.value = `Ошибка загрузки: ${res.status} ${t}`;
+    ok.value = false;
   }
 }
 
@@ -53,11 +57,15 @@ async function save(){
     if (form.webhook_url !== undefined) payload.webhook_url = form.webhook_url;
     const res = await fetch(`${API}/settings/telegram`, { method: 'PUT', headers: authHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify(payload) });
     ok.value = res.ok;
-    msg.value = res.ok ? 'Сохранено' : 'Ошибка сохранения';
+    if (res.ok) {
+      msg.value = 'Сохранено';
+    } else {
+      const t = await res.text().catch(()=> '');
+      msg.value = `Ошибка сохранения: ${res.status} ${t}`;
+    }
     if (res.ok) await load();
   } finally { saving.value = false; }
 }
 
 onMounted(load);
 </script>
-
