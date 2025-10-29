@@ -1,15 +1,15 @@
-<template>
+﻿<template>
   <section class="space-y-8">
     <div class="flex items-end justify-between gap-4">
-      <h2 class="text-2xl font-semibold">Магазины</h2>
+      <h2 class="text-2xl font-semibold">ÐœÐ°Ð³Ð°Ð·Ð¸Ð½Ñ‹</h2>
       <div class="flex items-center gap-3">
         <input
           v-model="query"
           type="text"
-          placeholder="Поиск по магазинам..."
+          placeholder="ÐŸÐ¾Ð¸ÑÐº Ð¿Ð¾ Ð¼Ð°Ð³Ð°Ð·Ð¸Ð½Ð°Ð¼..."
           class="w-64 rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
-        <RouterLink v-if="isAuthed" to="/stores/new" class="rounded-md bg-blue-600 text-white px-3 py-2 text-sm">Добавить магазин</RouterLink>
+        <RouterLink v-if="isAdmin" to="/stores/new" class="rounded-md bg-blue-600 text-white px-3 py-2 text-sm">Ð”Ð¾Ð±Ð°Ð²Ð¸Ñ‚ÑŒ Ð¼Ð°Ð³Ð°Ð·Ð¸Ð½</RouterLink>
       </div>
     </div>
 
@@ -24,9 +24,9 @@
               <RouterLink :to="`/stores/${s._id}`" class="font-medium text-gray-900 truncate hover:underline">{{ s.name }}</RouterLink>
               <p class="mt-1 text-[11px] text-gray-500 break-all">ID: {{ s._id }}</p>
             </div>
-            <div class="flex gap-2" v-if="isAuthed">
-              <RouterLink :to="`/stores/${s._id}/edit`" class="rounded-md border px-2 py-1 text-xs">Редактировать</RouterLink>
-              <button @click="removeStore(s)" class="rounded-md bg-red-600 text-white px-2 py-1 text-xs">Удалить</button>
+            <div class="flex gap-2" v-if="isAdmin">
+              <RouterLink :to="`/stores/${s._id}/edit`" class="rounded-md border px-2 py-1 text-xs">Ð ÐµÐ´Ð°ÐºÑ‚Ð¸Ñ€Ð¾Ð²Ð°Ñ‚ÑŒ</RouterLink>
+              <button @click="removeStore(s)" class="rounded-md bg-red-600 text-white px-2 py-1 text-xs">Ð£Ð´Ð°Ð»Ð¸Ñ‚ÑŒ</button>
             </div>
           </header>
           <p class="text-sm text-gray-700">{{ s.addr }}</p>
@@ -85,6 +85,8 @@ async function removeStore(s: Store) {
 onMounted(fetchStores);
 
 const auth = useAuth();
-const isAuthed = computed(() => !!auth.state.token && !!auth.state.username && !!auth.state.role);
+const isAdmin = computed(() => auth.isAdmin.value === true || auth.state.role === "admin");
 </script>
+
+
 

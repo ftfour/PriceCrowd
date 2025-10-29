@@ -78,13 +78,13 @@
             <div class="flex items-center justify-between">
               <div class="text-slate-600 text-sm">Товары в магазине</div>
               <div class="flex gap-2">
-                <button v-if="isAuthed" @click="editMode=!editMode" class="text-xs border rounded px-2 py-1">
+                <button v-if="isAdmin" @click="editMode=!editMode" class="text-xs border rounded px-2 py-1">
                   {{ editMode ? 'Готово' : 'Редактировать список товаров' }}
                 </button>
               </div>
             </div>
 
-            <form v-if="isAuthed && editMode" @submit.prevent="addItem" class="flex flex-wrap items-center gap-3">
+            <form v-if="isAdmin && editMode" @submit.prevent="addItem" class="flex flex-wrap items-center gap-3">
               <select v-model="newItem.product_id" class="h-9 border rounded px-2 text-sm min-w-[240px]">
                 <option value="" disabled>Выберите товар</option>
                 <option v-for="p in productsForSelect" :key="p._id" :value="p._id">{{ p.title }}</option>
@@ -104,7 +104,7 @@
                   </RouterLink>
                   <div class="text-xs text-slate-500 break-all">{{ it.product_id }}</div>
                 </div>
-                <div class="flex items-center gap-2" v-if="isAuthed && editMode">
+                <div class="flex items-center gap-2" v-if="isAdmin && editMode">
                   <input v-model.number="priceEdit[it.key]" type="number" step="0.01" min="0" class="h-9 w-24 border rounded px-2 text-sm" />
                   <button @click="savePrice(it)" class="h-9 px-3 rounded border text-sm">Сохранить</button>
                   <button @click="removeItem(it)" class="h-9 px-3 rounded bg-red-600 text-white text-sm">Удалить</button>

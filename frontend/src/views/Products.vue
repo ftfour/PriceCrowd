@@ -1,10 +1,10 @@
-<template>
+﻿<template>
   <section class="space-y-6">
     <div class="flex items-end justify-between gap-4">
-      <h2 class="text-2xl font-semibold">Товары</h2>
+      <h2 class="text-2xl font-semibold">Ð¢Ð¾Ð²Ð°Ñ€Ñ‹</h2>
       <div class="flex items-center gap-3">
-        <input v-model="query" type="text" placeholder="Поиск по товарам..." class="w-64 rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-        <RouterLink v-if="isAuthed" to="/products/new" class="rounded-md bg-blue-600 text-white px-3 py-2 text-sm">Добавить товар</RouterLink>
+        <input v-model="query" type="text" placeholder="ÐŸÐ¾Ð¸ÑÐº Ð¿Ð¾ Ñ‚Ð¾Ð²Ð°Ñ€Ð°Ð¼..." class="w-64 rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        <RouterLink v-if="isAdmin" to="/products/new" class="rounded-md bg-blue-600 text-white px-3 py-2 text-sm">Ð”Ð¾Ð±Ð°Ð²Ð¸Ñ‚ÑŒ Ñ‚Ð¾Ð²Ð°Ñ€</RouterLink>
       </div>
     </div>
 
@@ -19,9 +19,9 @@
               <RouterLink :to="`/products/${p._id}`" class="font-medium text-gray-900 hover:underline truncate block">{{ p.title }}</RouterLink>
               <p class="mt-1 text-xs text-gray-500 break-all">ID: {{ p._id }}</p>
             </div>
-            <div class="flex gap-2 shrink-0" v-if="isAuthed">
-              <RouterLink :to="`/products/${p._id}/edit`" class="rounded-md border px-3 py-1.5 text-xs">Редактировать</RouterLink>
-              <button @click="remove(p)" class="rounded-md bg-red-600 text-white px-3 py-1.5 text-xs">Удалить</button>
+            <div class="flex gap-2 shrink-0" v-if="isAdmin">
+              <RouterLink :to="`/products/${p._id}/edit`" class="rounded-md border px-3 py-1.5 text-xs">Ð ÐµÐ´Ð°ÐºÑ‚Ð¸Ñ€Ð¾Ð²Ð°Ñ‚ÑŒ</RouterLink>
+              <button @click="remove(p)" class="rounded-md bg-red-600 text-white px-3 py-1.5 text-xs">Ð£Ð´Ð°Ð»Ð¸Ñ‚ÑŒ</button>
             </div>
           </div>
           <p class="text-sm text-gray-700 mt-2 line-clamp-2">{{ p.desc }}</p>
@@ -30,7 +30,7 @@
           </div>
         </div>
       </div>
-      <div v-if="filtered.length === 0" class="p-8 text-center text-slate-500">Нет товаров</div>
+      <div v-if="filtered.length === 0" class="p-8 text-center text-slate-500">ÐÐµÑ‚ Ñ‚Ð¾Ð²Ð°Ñ€Ð¾Ð²</div>
     </div>
   </section>
   </template>
@@ -89,7 +89,7 @@ function categoryName(id: string) {
 }
 
 const auth = useAuth();
-const isAuthed = computed(() => !!auth.state.token && !!auth.state.username && !!auth.state.role);
+const isAdmin = computed(() => auth.isAdmin.value === true || auth.state.role === 'admin');
 </script>
 
 <style scoped>
