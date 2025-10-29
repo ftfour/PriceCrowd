@@ -1331,6 +1331,7 @@ dependencies = [
  "futures",
  "jsonwebtoken",
  "mongodb",
+ "once_cell",
  "rand 0.8.5",
  "reqwest",
  "serde",
