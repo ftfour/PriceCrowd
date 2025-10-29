@@ -157,6 +157,8 @@ pub struct TelegramSettingsDoc {
     pub webhook_url: Option<String>,
     #[serde(default)]
     pub enabled: bool,
+    #[serde(default)]
+    pub webhook_enabled: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -164,9 +166,9 @@ pub struct TelegramSettingsUpdate {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub token: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub chat_id: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub webhook_url: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub enabled: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub webhook_enabled: Option<bool>,
 }

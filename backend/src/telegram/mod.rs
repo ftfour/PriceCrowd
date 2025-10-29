@@ -38,7 +38,7 @@ struct SendMessagePayload<'a> { chat_id: i64, text: &'a str }
 pub async fn webhook(State(state): State<AppState>, Json(update): Json<TelegramUpdate>) -> impl IntoResponse {
     let settings = match state.telegram_settings.find_one(doc!{"_id": "telegram"}, None).await { Ok(opt)=>opt, Err(e)=> { error!(?e, "get settings"); None } };
     let Some(s) = settings else { return StatusCode::OK; };
-    if !s.enabled { return StatusCode::OK; }
+    if !(s.enabled && s.webhook_enabled) { return StatusCode::OK; }
     let Some(token) = s.token.as_ref() else { return StatusCode::OK; };
     if let Some(msg) = update.message {
         let _ = send_message(token, msg.chat.id, "Привет!").await;

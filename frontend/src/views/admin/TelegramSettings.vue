@@ -8,16 +8,13 @@
         <input v-model="form.token" class="w-full rounded-md border px-3 py-2 text-sm" placeholder="123456:ABC-DEF..." />
       </div>
       <div>
-        <label class="block text-sm mb-1">Chat ID</label>
-        <input v-model="form.chat_id" class="w-full rounded-md border px-3 py-2 text-sm" placeholder="@channel или числовой ID" />
-      </div>
-      <div>
-        <label class="block text-sm mb-1">Webhook URL</label>
+        <label class="block text-sm mb-1">Webhook URL (необязательно)</label>
         <input v-model="form.webhook_url" class="w-full rounded-md border px-3 py-2 text-sm" placeholder="https://.../telegram/webhook" />
       </div>
-      <label class="inline-flex items-center gap-2 text-sm">
-        <input type="checkbox" v-model="form.enabled" /> Включено
-      </label>
+      <div class="flex flex-col gap-2">
+        <label class="inline-flex items-center gap-2 text-sm"><input type="checkbox" v-model="form.enabled" /> Бот включен (polling)</label>
+        <label class="inline-flex items-center gap-2 text-sm"><input type="checkbox" v-model="form.webhook_enabled" /> Использовать вебхук</label>
+      </div>
 
       <div class="flex items-center gap-3 pt-2">
         <button :disabled="saving" class="rounded-md bg-blue-600 text-white px-4 py-2 text-sm">Сохранить</button>
@@ -25,13 +22,13 @@
       </div>
     </form>
   </div>
-</template>
+  </template>
 
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue';
 import { API, authHeaders } from '../../api';
 
-const form = reactive<{ token?: string; chat_id?: string; webhook_url?: string; enabled: boolean }>({ enabled: false });
+const form = reactive<{ token?: string; webhook_url?: string; enabled: boolean; webhook_enabled: boolean }>({ enabled: false, webhook_enabled: false });
 const saving = ref(false);
 const msg = ref('');
 const ok = ref(false);
@@ -42,18 +39,17 @@ async function load(){
   if (res.ok){
     const data = await res.json();
     form.token = data.token || '';
-    form.chat_id = data.chat_id || '';
     form.webhook_url = data.webhook_url || '';
     form.enabled = !!data.enabled;
+    form.webhook_enabled = !!data.webhook_enabled;
   }
 }
 
 async function save(){
   saving.value = true; msg.value = '';
   try{
-    const payload: any = { enabled: !!form.enabled };
+    const payload: any = { enabled: !!form.enabled, webhook_enabled: !!form.webhook_enabled };
     if (form.token !== undefined) payload.token = form.token;
-    if (form.chat_id !== undefined) payload.chat_id = form.chat_id;
     if (form.webhook_url !== undefined) payload.webhook_url = form.webhook_url;
     const res = await fetch(`${API}/settings/telegram`, { method: 'PUT', headers: authHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify(payload) });
     ok.value = res.ok;
