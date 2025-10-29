@@ -36,7 +36,7 @@ pub async fn create_user(State(state): State<AppState>, Json(body): Json<CreateU
     if body.username.trim().is_empty() || body.password.len() < 4 { return StatusCode::BAD_REQUEST.into_response(); }
     let salt = SaltString::generate(&mut rand::thread_rng());
     let hash = match Argon2::default().hash_password(body.password.as_bytes(), &salt) { Ok(h)=>h.to_string(), Err(e)=> { error!(?e, "hash_password failed"); return StatusCode::INTERNAL_SERVER_ERROR.into_response(); } };
-    let user = User { id: None, username: body.username, password_hash: hash, role: "user".into() };
+    let user = User { id: None, username: body.username, password_hash: hash, role: "user".into(), telegram_id: None };
     let coll = state.db.collection::<User>("users");
     match coll.insert_one(user, None).await {
         Ok(res) => {
