@@ -3,7 +3,7 @@
     <h1 class="text-xl font-semibold mb-4">Вход</h1>
     <form @submit.prevent="onSubmit" class="space-y-3">
       <div>
-        <label class="block text-sm mb-1">Логин</label>
+        <label class="block text-sm mb-1">Имя пользователя</label>
         <input v-model="username" required class="w-full rounded-md border px-3 py-2 text-sm" />
       </div>
       <div>
@@ -20,6 +20,7 @@
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { API } from '../api';
+import { loginAuth } from '../auth';
 
 const router = useRouter();
 const username = ref('');
@@ -35,11 +36,9 @@ async function onSubmit(){
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username: username.value, password: password.value })
     });
-    if(!res.ok){ error.value = 'Неверный логин или пароль'; return; }
+    if(!res.ok){ error.value = 'Неверные имя пользователя или пароль'; return; }
     const data = await res.json();
-    localStorage.setItem('token', data.token);
-    localStorage.setItem('username', data.username);
-    localStorage.setItem('role', data.role);
+    loginAuth(data.token, data.username, data.role);
     router.push('/');
   } finally { loading.value = false; }
 }
