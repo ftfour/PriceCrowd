@@ -6,10 +6,10 @@
         <input
           v-model="query"
           type="text"
-          placeholder="Поиск магазина..."
+          placeholder="Поиск по магазинам..."
           class="w-64 rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
-        <RouterLink to="/stores/new" class="rounded-md bg-blue-600 text-white px-3 py-2 text-sm">Добавить магазин</RouterLink>
+        <RouterLink v-if="isAuthed" to="/stores/new" class="rounded-md bg-blue-600 text-white px-3 py-2 text-sm">Добавить магазин</RouterLink>
       </div>
     </div>
 
@@ -24,7 +24,7 @@
               <RouterLink :to="`/stores/${s._id}`" class="font-medium text-gray-900 truncate hover:underline">{{ s.name }}</RouterLink>
               <p class="mt-1 text-[11px] text-gray-500 break-all">ID: {{ s._id }}</p>
             </div>
-            <div class="flex gap-2">
+            <div class="flex gap-2" v-if="isAuthed">
               <RouterLink :to="`/stores/${s._id}/edit`" class="rounded-md border px-2 py-1 text-xs">Редактировать</RouterLink>
               <button @click="removeStore(s)" class="rounded-md bg-red-600 text-white px-2 py-1 text-xs">Удалить</button>
             </div>
@@ -39,6 +39,8 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
+import { useAuth } from '../auth';
+import { authHeaders } from '../api';
 
 type Store = { _id: string; name: string; addr: string; desc?: string; image_url?: string };
 
@@ -76,10 +78,13 @@ async function fetchStores() {
 }
 
 async function removeStore(s: Store) {
-  await fetch(`${API}/stores/${s._id}`, { method: 'DELETE' });
+  await fetch(`${API}/stores/${s._id}`, { method: 'DELETE', headers: authHeaders() });
   await fetchStores();
 }
 
 onMounted(fetchStores);
+
+const auth = useAuth();
+const isAuthed = computed(() => !!auth.state.token && !!auth.state.username && !!auth.state.role);
 </script>
 

@@ -3,8 +3,8 @@
     <div class="flex items-end justify-between gap-4">
       <h2 class="text-2xl font-semibold">Товары</h2>
       <div class="flex items-center gap-3">
-        <input v-model="query" type="text" placeholder="Поиск товара..." class="w-64 rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-        <RouterLink to="/products/new" class="rounded-md bg-blue-600 text-white px-3 py-2 text-sm">Добавить товар</RouterLink>
+        <input v-model="query" type="text" placeholder="Поиск по товарам..." class="w-64 rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        <RouterLink v-if="isAuthed" to="/products/new" class="rounded-md bg-blue-600 text-white px-3 py-2 text-sm">Добавить товар</RouterLink>
       </div>
     </div>
 
@@ -19,8 +19,8 @@
               <RouterLink :to="`/products/${p._id}`" class="font-medium text-gray-900 hover:underline truncate block">{{ p.title }}</RouterLink>
               <p class="mt-1 text-xs text-gray-500 break-all">ID: {{ p._id }}</p>
             </div>
-            <div class="flex gap-2 shrink-0">
-              <RouterLink :to="`/products/${p._id}/edit`" class="rounded-md border px-3 py-1.5 text-xs">Редактировать</RouterLink>
+            <div class="flex gap-2 shrink-0" v-if="isAuthed">
+              <RouterLink :to="`/products/${p._id}/edit`" class="rounded-md border px-3 py-1.5 text-xs">Редактировать</Router>
               <button @click="remove(p)" class="rounded-md bg-red-600 text-white px-3 py-1.5 text-xs">Удалить</button>
             </div>
           </div>
@@ -33,14 +33,15 @@
       <div v-if="filtered.length === 0" class="p-8 text-center text-slate-500">Нет товаров</div>
     </div>
   </section>
-</template>
+  </template>
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
+import { useAuth } from '../auth';
+import { API, authHeaders } from '../api';
 
 type Product = { _id: string; title: string; desc: string; image_url?: string; category_ids?: string[] };
 
-import { API } from '../api';
 const products = ref<Product[]>([]);
 const categories = ref<any[]>([]);
 const query = ref('');
@@ -75,8 +76,6 @@ async function fetchProducts() {
   }
 }
 
-import { authHeaders } from '../api';
-
 async function remove(p: Product) {
   await fetch(`${API}/products/${p._id}`, { method: 'DELETE', headers: authHeaders() });
   await fetchProducts();
@@ -88,6 +87,9 @@ function categoryName(id: string) {
   const c = categories.value.find((x:any)=> x._id_str === id);
   return c?.name || id;
 }
+
+const auth = useAuth();
+const isAuthed = computed(() => !!auth.state.token && !!auth.state.username && !!auth.state.role);
 </script>
 
 <style scoped>
@@ -98,3 +100,4 @@ function categoryName(id: string) {
   overflow: hidden;
 }
 </style>
+

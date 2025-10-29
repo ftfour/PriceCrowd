@@ -2,7 +2,7 @@
   <section class="space-y-8">
     <div class="flex items-end justify-between gap-4">
       <h2 class="text-2xl font-semibold">Категории</h2>
-      <RouterLink to="/categories/new" class="rounded-md bg-blue-600 text-white px-3 py-2 text-sm">Добавить категорию</RouterLink>
+      <RouterLink v-if="isAuthed" to="/categories/new" class="rounded-md bg-blue-600 text-white px-3 py-2 text-sm">Добавить категорию</RouterLink>
     </div>
 
     <div>
@@ -33,8 +33,10 @@
             </td>
             <td class="px-5 py-3 text-slate-600">{{ c.desc }}</td>
             <td class="px-5 py-3">
-              <RouterLink :to="`/categories/${c._id_str}/edit`" class="text-blue-600 hover:underline text-sm">Изменить</RouterLink>
-              <button @click="remove(c)" class="ml-3 text-rose-600 hover:underline text-sm">Удалить</button>
+              <template v-if="isAuthed">
+                <RouterLink :to="`/categories/${c._id_str}/edit`" class="text-blue-600 hover:underline text-sm">Редактировать</RouterLink>
+                <button @click="remove(c)" class="ml-3 text-rose-600 hover:underline text-sm">Удалить</button>
+              </template>
             </td>
           </tr>
         </tbody>
@@ -44,11 +46,11 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
-import { authHeaders } from '../api';
+import { onMounted, ref, computed } from 'vue';
+import { API, authHeaders } from '../api';
+import { useAuth } from '../auth';
 import CategoryTree from '../components/CategoryTree.vue';
 
-import { API } from '../api';
 const categories = ref<any[]>([]);
 
 function mapId(x:any){ return (typeof x === 'string' ? x : x?.$oid); }
@@ -72,4 +74,8 @@ async function remove(c:any){
 }
 
 onMounted(load);
+
+const auth = useAuth();
+const isAuthed = computed(() => !!auth.state.token && !!auth.state.username && !!auth.state.role);
 </script>
+

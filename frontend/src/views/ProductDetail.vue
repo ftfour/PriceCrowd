@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <section class="space-y-6" v-if="product">
     <div class="grid grid-cols-1 md:grid-cols-[200px_1fr] gap-6 items-start">
       <div class="bg-white border rounded-lg p-2 flex items-center justify-center">
@@ -11,15 +11,15 @@
           <span v-for="cid in product.category_ids" :key="cid" class="text-xs bg-slate-100 border border-slate-200 rounded px-2 py-1">{{ categoryName(cid) }}</span>
         </div>
         <div class="flex gap-2">
-          <RouterLink :to="`/products/${id}/edit`" class="rounded-md border px-3 py-2 text-sm">Редактировать</RouterLink>
-          <RouterLink to="/products" class="rounded-md px-3 py-2 text-sm bg-blue-600 text-white">Назад к списку</RouterLink>
+          <RouterLink v-if="isAuthed" :to="`/products/${id}/edit`" class="rounded-md border px-3 py-2 text-sm">Редактировать</RouterLink>
+          <RouterLink to="/products" class="rounded-md px-3 py-2 text-sm bg-blue-600 text-white">ÐÐ°Ð·Ð°Ð´ Ðº ÑÐ¿Ð¸ÑÐºÑƒ</RouterLink>
         </div>
       </div>
     </div>
 
-    <!-- Где купить и цены -->
+    <!-- Ð“Ð´Ðµ ÐºÑƒÐ¿Ð¸Ñ‚ÑŒ Ð¸ Ñ†ÐµÐ½Ñ‹ -->
     <div v-if="insights" class="space-y-4">
-      <h2 class="text-lg font-semibold">Где купить и цена</h2>
+      <h2 class="text-lg font-semibold">Ð“Ð´Ðµ ÐºÑƒÐ¿Ð¸Ñ‚ÑŒ Ð¸ Ñ†ÐµÐ½Ð°</h2>
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div v-for="(k,i) in kpis" :key="i" class="rounded-lg border bg-white p-4">
           <div class="text-sm text-slate-500">{{ k.title }}</div>
@@ -30,8 +30,8 @@
       <div class="rounded-lg border bg-white divide-y">
         <div v-for="s in (insights?.stores||[]).slice().sort((a:any,b:any)=> Number(a.price)-Number(b.price))" :key="String(s.store_id)" class="p-4 flex flex-col gap-2">
           <div class="flex items-center justify-between gap-3">
-            <RouterLink :to="`/stores/${typeof s.store_id==='string'? s.store_id : s.store_id?.$oid}`" class="font-medium text-slate-900 hover:underline">{{ s.store_name || 'Магазин' }}</RouterLink>
-            <div class="text-emerald-600 font-semibold">{{ Number(s.price).toLocaleString('ru-RU') }} ₽</div>
+            <RouterLink :to="`/stores/${typeof s.store_id==='string'? s.store_id : s.store_id?.$oid}`" class="font-medium text-slate-900 hover:underline">{{ s.store_name || 'ÐœÐ°Ð³Ð°Ð·Ð¸Ð½' }}</RouterLink>
+            <div class="text-emerald-600 font-semibold">{{ Number(s.price).toLocaleString('ru-RU') }} â‚½</div>
           </div>
           <div class="w-full h-16">
             <svg viewBox="0 0 100 50" class="w-full h-full text-emerald-500">
@@ -39,11 +39,11 @@
             </svg>
           </div>
         </div>
-        <div v-if="!insights?.stores || !insights.stores.length" class="p-8 text-center text-slate-500">Пока нет данных по магазинам</div>
+        <div v-if="!insights?.stores || !insights.stores.length" class="p-8 text-center text-slate-500">ÐŸÐ¾ÐºÐ° Ð½ÐµÑ‚ Ð´Ð°Ð½Ð½Ñ‹Ñ… Ð¿Ð¾ Ð¼Ð°Ð³Ð°Ð·Ð¸Ð½Ð°Ð¼</div>
       </div>
     </div>
   </section>
-  <div v-else class="text-slate-500">Загрузка...</div>
+  <div v-else class="text-slate-500">Ð—Ð°Ð³Ñ€ÑƒÐ·ÐºÐ°...</div>
 </template>
 
 <script setup lang="ts">
@@ -97,8 +97,8 @@ const kpis = computed(()=> {
   const count = Array.isArray(s.stores) ? s.stores.length : 0;
   const cityAvg = s.city_avg ? Math.round(Number(s.city_avg)) : null;
   return [
-    { title: 'В магазинах', value: String(count) },
-    { title: 'Средняя по городу', value: cityAvg!=null ? `${cityAvg.toLocaleString('ru-RU')} ₽` : '—' },
+    { title: 'Ð’ Ð¼Ð°Ð³Ð°Ð·Ð¸Ð½Ð°Ñ…', value: String(count) },
+    { title: 'Ð¡Ñ€ÐµÐ´Ð½ÑÑ Ð¿Ð¾ Ð³Ð¾Ñ€Ð¾Ð´Ñƒ', value: cityAvg!=null ? `${cityAvg.toLocaleString('ru-RU')} â‚½` : 'â€”' },
   ];
 });
 
@@ -109,5 +109,10 @@ function makeSparkFromHistory(hist: Array<{ts_ms:number, price:number}>){
   const range = Math.max(1, max-min);
   return vals.map((v,i)=> `${(i/(vals.length-1))*100},${50-((v-min)/range)*50}`).join(' ');
 }
+import { useAuth } from '../auth';
+const auth = useAuth();
+const isAuthed = computed(() => !!auth.state.token && !!auth.state.username && !!auth.state.role);
 </script>
+
+
 
