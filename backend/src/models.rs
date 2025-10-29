@@ -129,6 +129,8 @@ pub struct User {
     pub username: String,
     pub password_hash: String,
     pub role: String, // "admin" | "user"
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub telegram_id: Option<i64>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -142,6 +144,18 @@ pub struct Claims {
     pub sub: String,
     pub role: String,
     pub exp: i64,
+}
+
+// Telegram link codes
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct TelegramLink {
+    #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
+    pub id: Option<ObjectId>,
+    pub code: String,
+    pub username: String,
+    pub exp_ms: i64,
+    #[serde(default)]
+    pub used: bool,
 }
 
 // Admin Settings

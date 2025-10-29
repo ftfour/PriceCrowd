@@ -78,7 +78,16 @@ pub fn spawn_poller(state: AppState) -> JoinHandle<()> {
                             if count > 0 { push_log("info", &format!("получено обновлений: {}", count)).await; }
                             for u in &updates {
                                 if let Some(ref msg) = u.message {
-                                    let _ = send_message(&token, msg.chat.id, "Привет!").await;
+                                    let text = msg.text.clone().unwrap_or_default();
+                                    if let Some(code) = parse_link_code(&text) {
+                                        match link_account(&state, &code, msg.chat.id).await {
+                                            Ok(true) => { let _ = send_message(&token, msg.chat.id, "Аккаунт привязан ✅").await; push_log("info", &format!("linked code {}", code)).await; }
+                                            Ok(false) => { let _ = send_message(&token, msg.chat.id, "Код недействителен или истёк ❌").await; push_log("warn", &format!("invalid code {}", code)).await; }
+                                            Err(e) => { let _ = send_message(&token, msg.chat.id, "Ошибка привязки").await; push_log("error", &format!("link error: {}", e)).await; }
+                                        }
+                                    } else {
+                                        let _ = send_message(&token, msg.chat.id, "Привет!").await;
+                                    }
                                 }
                             }
                             offset = new_offset;
@@ -151,4 +160,32 @@ pub async fn status(State(state): State<AppState>) -> impl IntoResponse {
     let logs = LOGS.lock().await.clone();
     let body = serde_json::json!({ "status": status, "logs": logs });
     (StatusCode::OK, Json(body)).into_response()
+}
+
+fn parse_link_code(text: &str) -> Option<String> {
+    let t = text.trim();
+    if t.starts_with("/link ") {
+        return Some(t[6..].trim().to_uppercase());
+    }
+    // Accept raw 6-char code
+    if t.len()==6 && t.chars().all(|c| c.is_ascii_alphanumeric()) {
+        return Some(t.to_uppercase());
+    }
+    None
+}
+
+async fn link_account(state: &AppState, code: &str, chat_id: i64) -> anyhow::Result<bool> {
+    // find code
+    let now = now_ms();
+    let coll = &state.telegram_links;
+    let filter = doc!{"code": code, "used": false, "exp_ms": {"$gt": now}};
+    if let Some(link) = coll.find_one(filter, None).await? {
+        // set user.telegram_id
+        let users = state.db.collection::<crate::models::User>("users");
+        users.update_one(doc!{"username": &link.username}, doc!{"$set": {"telegram_id": chat_id}}, None).await?;
+        // mark used
+        if let Some(id) = link.id { let _ = state.telegram_links.update_one(doc!{"_id": id}, doc!{"$set": {"used": true}}, None).await; }
+        return Ok(true);
+    }
+    Ok(false)
 }

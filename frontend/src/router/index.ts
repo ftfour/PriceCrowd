@@ -13,6 +13,7 @@ const Cart = () => import('../views/Cart.vue');
 const Categories = () => import('../views/Categories.vue');
 const CategoryForm = () => import('../views/CategoryForm.vue');
 const Login = () => import('../views/Login.vue');
+const Profile = () => import('../views/Profile.vue');
 
 const router = createRouter({
   history: createWebHistory(),
@@ -33,6 +34,7 @@ const router = createRouter({
     { path: '/categories/new', name: 'category-new', component: CategoryForm },
     { path: '/categories/:id/edit', name: 'category-edit', component: CategoryForm },
     { path: '/login', name: 'login', component: Login },
+    { path: '/profile', name: 'profile', component: Profile },
     { path: '/admin', name: 'admin', component: () => import('../views/Admin.vue'), meta: { requiresAdmin: true } },
     { path: '/:pathMatch(.*)*', redirect: '/' },
   ],

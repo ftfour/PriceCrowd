@@ -23,6 +23,7 @@
                 <div class="text-[11px] text-slate-500">{{ auth.state.role === 'admin' ? 'Администратор' : 'Пользователь' }}</div>
               </div>
             </div>
+            <RouterLink to="/profile" class="rounded-md border px-3 py-1.5">Профиль</RouterLink>
             <button @click="onLogout" class="rounded-md border px-3 py-1.5">Выйти</button>
           </template>
           <template v-else>

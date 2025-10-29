@@ -6,6 +6,11 @@ use argon2::{Argon2, password_hash::{PasswordHasher, SaltString}};
 
 use crate::models::User;
 use crate::state::AppState;
+use axum::http::HeaderMap;
+use jsonwebtoken::{DecodingKey, Validation, decode};
+use chrono::Utc;
+use crate::models::{Claims, TelegramLink};
+use rand::{distributions::Alphanumeric, Rng};
 
 #[derive(serde::Deserialize)]
 pub struct CreateUser { pub username: String, pub password: String }
@@ -70,3 +75,45 @@ pub async fn delete_user(State(state): State<AppState>, Path(id): Path<String>) 
     }
 }
 
+fn extract_username_from_auth(headers: &HeaderMap, secret: &str) -> Option<String> {
+    let auth = headers.get(axum::http::header::AUTHORIZATION)?.to_str().ok()?;
+    let token = auth.strip_prefix("Bearer ")?;
+    let data = decode::<Claims>(token, &DecodingKey::from_secret(secret.as_bytes()), &Validation::default()).ok()?;
+    Some(data.claims.sub)
+}
+
+#[derive(serde::Serialize)]
+pub struct LinkStartResponse { pub code: String, pub exp_ms: i64 }
+
+pub async fn start_telegram_link(State(state): State<AppState>, headers: HeaderMap) -> impl IntoResponse {
+    let Some(username) = extract_username_from_auth(&headers, &state.jwt_secret) else { return StatusCode::UNAUTHORIZED.into_response(); };
+    // generate code
+    let code: String = rand::thread_rng().sample_iter(&Alphanumeric).take(6).map(char::from).collect::<String>().to_uppercase();
+    let exp_ms = (Utc::now() + chrono::Duration::minutes(15)).timestamp_millis();
+    let link = TelegramLink { id: None, code: code.clone(), username, exp_ms, used: false };
+    match state.telegram_links.insert_one(link, None).await {
+        Ok(_) => Json(LinkStartResponse { code, exp_ms }).into_response(),
+        Err(e) => { error!(?e, "insert link failed"); StatusCode::INTERNAL_SERVER_ERROR.into_response() }
+    }
+}
+
+#[derive(serde::Serialize)]
+pub struct LinkStatus { pub linked: bool, pub telegram_id: Option<i64> }
+
+pub async fn telegram_link_status(State(state): State<AppState>, headers: HeaderMap) -> impl IntoResponse {
+    let Some(username) = extract_username_from_auth(&headers, &state.jwt_secret) else { return StatusCode::UNAUTHORIZED.into_response(); };
+    let coll = state.db.collection::<User>("users");
+    match coll.find_one(doc!{"username": &username}, None).await {
+        Ok(Some(u)) => Json(LinkStatus { linked: u.telegram_id.is_some(), telegram_id: u.telegram_id }).into_response(),
+        _ => StatusCode::NOT_FOUND.into_response(),
+    }
+}
+
+pub async fn unlink_telegram(State(state): State<AppState>, headers: HeaderMap) -> impl IntoResponse {
+    let Some(username) = extract_username_from_auth(&headers, &state.jwt_secret) else { return StatusCode::UNAUTHORIZED.into_response(); };
+    let coll = state.db.collection::<User>("users");
+    match coll.update_one(doc!{"username": &username}, doc!{"$unset": {"telegram_id": ""}}, None).await {
+        Ok(_) => StatusCode::NO_CONTENT.into_response(),
+        Err(e) => { error!(?e, "unlink failed"); StatusCode::INTERNAL_SERVER_ERROR.into_response() }
+    }
+}
