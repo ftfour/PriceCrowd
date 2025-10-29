@@ -33,6 +33,7 @@ pub fn build(state: AppState, uploads_dir: String) -> Router {
         .route("/stores/:id/products/insights", get(handlers::insights::list_store_product_insights))
         .route("/stores/:id/activities", get(handlers::activities::list_store_activities))
         .route("/activities", get(handlers::activities::list_all_activities))
+        .route("/ratings/users", get(handlers::ratings::list_user_ratings))
         .nest_service("/uploads", static_service)
         .with_state(state.clone());
 

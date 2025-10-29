@@ -33,7 +33,7 @@ pub struct TelegramMessage {
 pub struct TelegramChat { pub id: i64 }
 
 #[derive(Debug, Deserialize, Clone)]
-pub struct TelegramUser { #[allow(dead_code)] pub id: i64, #[allow(dead_code)] pub first_name: Option<String> }
+pub struct TelegramUser { #[allow(dead_code)] pub id: i64, #[allow(dead_code)] pub first_name: Option<String>, #[serde(default)] pub username: Option<String> }
 
 #[derive(Serialize)]
 struct SendMessagePayload<'a> { chat_id: i64, text: &'a str }
@@ -80,7 +80,8 @@ pub fn spawn_poller(state: AppState) -> JoinHandle<()> {
                                 if let Some(ref msg) = u.message {
                                     let text = msg.text.clone().unwrap_or_default();
                                     if let Some(code) = parse_link_code(&text) {
-                                        match link_account(&state, &code, msg.chat.id).await {
+                                        let tg_username = msg.from.as_ref().and_then(|u| u.username.clone());
+                                        match link_account(&state, &code, msg.chat.id, tg_username.as_deref()).await {
                                             Ok(true) => { let _ = send_message(&token, msg.chat.id, "Аккаунт привязан ✅").await; push_log("info", &format!("linked code {}", code)).await; }
                                             Ok(false) => { let _ = send_message(&token, msg.chat.id, "Код недействителен или истёк ❌").await; push_log("warn", &format!("invalid code {}", code)).await; }
                                             Err(e) => { let _ = send_message(&token, msg.chat.id, "Ошибка привязки").await; push_log("error", &format!("link error: {}", e)).await; }
@@ -174,7 +175,7 @@ fn parse_link_code(text: &str) -> Option<String> {
     None
 }
 
-async fn link_account(state: &AppState, code: &str, chat_id: i64) -> anyhow::Result<bool> {
+async fn link_account(state: &AppState, code: &str, chat_id: i64, username: Option<&str>) -> anyhow::Result<bool> {
     // find code
     let now = now_ms();
     let coll = &state.telegram_links;
@@ -182,7 +183,9 @@ async fn link_account(state: &AppState, code: &str, chat_id: i64) -> anyhow::Res
     if let Some(link) = coll.find_one(filter, None).await? {
         // set user.telegram_id
         let users = state.db.collection::<crate::models::User>("users");
-        users.update_one(doc!{"username": &link.username}, doc!{"$set": {"telegram_id": chat_id}}, None).await?;
+        let mut set = doc!{"telegram_id": chat_id};
+        if let Some(u) = username { set.insert("telegram_username", u); }
+        users.update_one(doc!{"username": &link.username}, doc!{"$set": set}, None).await?;
         // mark used
         if let Some(id) = link.id { let _ = state.telegram_links.update_one(doc!{"_id": id}, doc!{"$set": {"used": true}}, None).await; }
         return Ok(true);

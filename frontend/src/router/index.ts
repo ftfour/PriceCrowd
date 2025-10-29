@@ -14,6 +14,7 @@ const Categories = () => import('../views/Categories.vue');
 const CategoryForm = () => import('../views/CategoryForm.vue');
 const Login = () => import('../views/Login.vue');
 const Profile = () => import('../views/Profile.vue');
+const Rating = () => import('../views/Rating.vue');
 
 const router = createRouter({
   history: createWebHistory(),
@@ -35,6 +36,7 @@ const router = createRouter({
     { path: '/categories/:id/edit', name: 'category-edit', component: CategoryForm },
     { path: '/login', name: 'login', component: Login },
     { path: '/profile', name: 'profile', component: Profile },
+    { path: '/rating', name: 'rating', component: Rating },
     { path: '/admin', name: 'admin', component: () => import('../views/Admin.vue'), meta: { requiresAdmin: true } },
     { path: '/:pathMatch(.*)*', redirect: '/' },
   ],

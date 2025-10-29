@@ -131,6 +131,8 @@ pub struct User {
     pub role: String, // "admin" | "user"
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub telegram_id: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub telegram_username: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
