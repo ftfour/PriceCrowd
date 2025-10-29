@@ -24,6 +24,9 @@ async fn main() -> anyhow::Result<()> {
 
     let state = state::init_from_env().await?;
 
+    // Start Telegram poller (runs only when enabled in settings)
+    let _tg_handle = telegram::spawn_poller(state.clone());
+
     let app: Router = routes::build(state, uploads_dir);
 
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
