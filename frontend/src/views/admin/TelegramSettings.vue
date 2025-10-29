@@ -21,6 +21,33 @@
         <span v-if="msg" class="text-sm" :class="ok ? 'text-emerald-600' : 'text-rose-600'">{{ msg }}</span>
       </div>
     </form>
+
+    <div class="mt-8 space-y-3">
+      <h3 class="text-base font-semibold">Статус бота</h3>
+      <div class="rounded-lg border bg-white p-4 text-sm text-slate-700">
+        <div>Включен (polling): <b>{{ status.enabled ? 'Да' : 'Нет' }}</b></div>
+        <div>Вебхук: <b>{{ status.webhook_enabled ? 'Да' : 'Нет' }}</b></div>
+        <div>Пуллинг активен: <b>{{ status.polling ? 'Да' : 'Нет' }}</b></div>
+        <div>Последний опрос: <b>{{ formatTs(status.last_poll_ms) }}</b></div>
+      </div>
+
+      <h3 class="text-base font-semibold">Последние логи</h3>
+      <div class="rounded-lg border bg-white p-0 max-h-64 overflow-auto">
+        <table class="w-full text-left text-xs">
+          <thead class="bg-slate-50 text-slate-500">
+            <tr><th class="px-3 py-2 w-40">Время</th><th class="px-3 py-2 w-16">Ур.</th><th class="px-3 py-2">Сообщение</th></tr>
+          </thead>
+          <tbody>
+            <tr v-for="(l,i) in logs" :key="i" class="border-t">
+              <td class="px-3 py-2">{{ formatTs(l.ts_ms) }}</td>
+              <td class="px-3 py-2 uppercase text-slate-500">{{ l.level }}</td>
+              <td class="px-3 py-2">{{ l.message }}</td>
+            </tr>
+            <tr v-if="logs.length===0"><td colspan="3" class="px-3 py-3 text-slate-500">Нет записей</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
   </div>
   </template>
 
@@ -32,6 +59,8 @@ const form = reactive<{ token?: string; webhook_url?: string; enabled: boolean; 
 const saving = ref(false);
 const msg = ref('');
 const ok = ref(false);
+const status = reactive<{ enabled: boolean; webhook_enabled: boolean; polling: boolean; last_poll_ms?: number | null }>({ enabled: false, webhook_enabled: false, polling: false, last_poll_ms: null });
+const logs = ref<Array<{ ts_ms: number; level: string; message: string }>>([]);
 
 async function load(){
   msg.value = '';
@@ -46,6 +75,19 @@ async function load(){
     const t = await res.text().catch(()=> '');
     msg.value = `Ошибка загрузки: ${res.status} ${t}`;
     ok.value = false;
+  }
+}
+
+async function loadStatus(){
+  const res = await fetch(`${API}/settings/telegram/status`, { headers: authHeaders() });
+  if (res.ok){
+    const data = await res.json();
+    const st = data.status || {};
+    status.enabled = !!st.enabled;
+    status.webhook_enabled = !!st.webhook_enabled;
+    status.polling = !!st.polling;
+    status.last_poll_ms = st.last_poll_ms ?? null;
+    logs.value = Array.isArray(data.logs) ? data.logs : [];
   }
 }
 
@@ -68,4 +110,11 @@ async function save(){
 }
 
 onMounted(load);
+onMounted(() => { loadStatus(); setInterval(loadStatus, 5000); });
+
+function formatTs(ms?: number | null){
+  if (!ms) return '-';
+  const d = new Date(ms);
+  return d.toLocaleString();
+}
 </script>

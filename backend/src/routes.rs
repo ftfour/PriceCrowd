@@ -44,6 +44,7 @@ pub fn build(state: AppState, uploads_dir: String) -> Router {
         .route("/stores/:id/products", post(handlers::stores::add_store_product))
         .route("/stores/:id/products/:product_id", put(handlers::stores::update_store_product).delete(handlers::stores::remove_store_product))
         .route("/settings/telegram", get(handlers::settings::get_telegram).put(handlers::settings::put_telegram))
+        .route("/settings/telegram/status", get(crate::telegram::status))
         .route("/upload", post(handlers::uploads::upload_file))
         .with_state(state.clone())
         .layer(admin_guard);

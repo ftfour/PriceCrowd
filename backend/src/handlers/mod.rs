@@ -7,3 +7,4 @@ pub mod uploads;
 pub mod activities;
 pub mod auth;
 pub mod settings;
+// telegram status endpoint is in module telegram

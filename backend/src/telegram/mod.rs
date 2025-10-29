@@ -4,6 +4,10 @@ use serde::{Deserialize, Serialize};
 use tokio::task::JoinHandle;
 use tokio::time::{sleep, Duration};
 use tracing::{error, info, warn};
+use std::sync::atomic::{AtomicI64, Ordering};
+use std::time::{SystemTime, UNIX_EPOCH};
+use once_cell::sync::Lazy;
+use tokio::sync::Mutex;
 
 use crate::state::AppState;
 
@@ -70,15 +74,19 @@ pub fn spawn_poller(state: AppState) -> JoinHandle<()> {
                     // Long polling
                     match get_updates(&client, &token, offset).await {
                         Ok((updates, new_offset)) => {
+                            let count = updates.len();
+                            if count > 0 { push_log("info", &format!("получено обновлений: {}", count)).await; }
                             for u in &updates {
                                 if let Some(ref msg) = u.message {
                                     let _ = send_message(&token, msg.chat.id, "Привет!").await;
                                 }
                             }
                             offset = new_offset;
+                            LAST_POLL_MS.store(now_ms(), Ordering::Relaxed);
                         }
                         Err(e) => {
                             warn!(?e, "telegram poller: getUpdates error");
+                            push_log("warn", &format!("ошибка getUpdates: {}", e)).await;
                             sleep(Duration::from_secs(3)).await;
                         }
                     }
@@ -113,4 +121,34 @@ async fn send_message(token: &str, chat_id: i64, text: &str) -> anyhow::Result<(
     let resp = client.post(&url).json(&payload).send().await?;
     if !resp.status().is_success() { anyhow::bail!("sendMessage failed: status {:?}", resp.status()); }
     Ok(())
+}
+
+#[derive(Serialize, Clone)]
+pub struct LogEntry { ts_ms: i64, level: String, message: String }
+
+static LAST_POLL_MS: AtomicI64 = AtomicI64::new(0);
+static LOGS: Lazy<Mutex<Vec<LogEntry>>> = Lazy::new(|| Mutex::new(Vec::with_capacity(200)));
+const MAX_LOGS: usize = 200;
+
+fn now_ms() -> i64 { SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_millis() as i64 }
+
+async fn push_log(level: &str, message: &str) {
+    let mut guard = LOGS.lock().await;
+    guard.push(LogEntry { ts_ms: now_ms(), level: level.to_string(), message: message.to_string() });
+    if guard.len() > MAX_LOGS { let overflow = guard.len() - MAX_LOGS; guard.drain(0..overflow); }
+}
+
+#[derive(Serialize)]
+pub struct BotStatus { enabled: bool, webhook_enabled: bool, polling: bool, last_poll_ms: Option<i64> }
+
+pub async fn status(State(state): State<AppState>) -> impl IntoResponse {
+    let settings = state.telegram_settings.find_one(doc!{"_id": "telegram"}, None).await.ok().flatten();
+    let (enabled, webhook_enabled) = settings.map(|s| (s.enabled, s.webhook_enabled)).unwrap_or((false,false));
+    let last = LAST_POLL_MS.load(Ordering::Relaxed);
+    let last_poll_ms = if last > 0 { Some(last) } else { None };
+    let polling = enabled; // признак: воркер активен, если включен бот
+    let status = BotStatus { enabled, webhook_enabled, polling, last_poll_ms };
+    let logs = LOGS.lock().await.clone();
+    let body = serde_json::json!({ "status": status, "logs": logs });
+    (StatusCode::OK, Json(body)).into_response()
 }
