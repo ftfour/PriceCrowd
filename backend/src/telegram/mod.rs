@@ -11,6 +11,50 @@ use tokio::sync::Mutex;
 
 use crate::state::AppState;
 
+// Краткая команда для выдачи политики конфиденциальности в боте
+const PRIVACY_TEXT: &str = r#"Политика конфиденциальности проекта «PriceCrowd»
+
+Дата последнего обновления: 31 октября 2025 г.
+
+1) Общие положения
+Сервис разработан в исследовательских и образовательных целях. Используя сервис, вы соглашаетесь с Политикой.
+
+2) Цели обработки
+- Расшифровка фискальных чеков (открытые данные ФНС)
+- Статистический анализ цен
+- Обезличенные отчёты
+- Улучшение качества сервиса
+
+3) Обрабатываемые данные
+- Данные из QR‑кода чека (дата, сумма, ФН/ФД/ФП и т.п.)
+- Товары и цены из API ФНС
+- Техническая информация (время запроса, версия Telegram и т.п.)
+Сервис НЕ хранит: ФИО, телефон, адрес, ИНН, email, фото чеков/QR, данные карт.
+
+4) Правовые основания
+54‑ФЗ, 152‑ФЗ (обезличенные данные), 149‑ФЗ. Сервис не является оператором ПДн.
+
+5) Локальная обработка
+Сканирование QR — на устройстве. На сервер отправляется только текст QR.
+
+6) Передача и хранение
+Только HTTPS. Данные — обезличенно в MongoDB. Доступ ограничен администраторами.
+
+7) Сроки
+Обезличенные данные — бессрочно для статистики/исследований. Можно запросить удаление данных по Telegram‑ID.
+
+8) Права
+Право на информацию, прекращение обработки и удаление, отзыв согласия. Пишите в боте.
+
+9) Контакты
+Email: koilfrost@gmail.com
+"#;
+
+fn is_privacy_query(text: &str) -> bool {
+    let t = text.trim().to_lowercase();
+    t == "/privacy" || t == "/policy" || t.contains("политик") || t.contains("privacy")
+}
+
 #[derive(Debug, Deserialize, Clone)]
 pub struct TelegramUpdate {
     #[serde(default)]
@@ -79,6 +123,10 @@ pub fn spawn_poller(state: AppState) -> JoinHandle<()> {
                             for u in &updates {
                                 if let Some(ref msg) = u.message {
                                     let text = msg.text.clone().unwrap_or_default();
+                                    if is_privacy_query(&text) {
+                                        let _ = send_message(&token, msg.chat.id, PRIVACY_TEXT).await;
+                                        continue;
+                                    }
                                     if let Some(code) = parse_link_code(&text) {
                                         let tg_username = msg.from.as_ref().and_then(|u| u.username.clone());
                                         match link_account(&state, &code, msg.chat.id, tg_username.as_deref()).await {

@@ -1,5 +1,5 @@
 use anyhow::Result;
-use mongodb::{options::ClientOptions, Client, Collection, Database};
+use mongodb::{Collection, Database};
 use tracing::info;
 use argon2::{Argon2, password_hash::{PasswordHasher, SaltString}};
 
@@ -23,11 +23,9 @@ pub async fn init_from_env() -> Result<AppState> {
     let db_name = std::env::var("DATABASE_NAME").unwrap_or_else(|_| "pricecrowd".into());
     let jwt_secret = std::env::var("JWT_SECRET").unwrap_or_else(|_| "dev-secret-change-me".into());
 
-    let mut opts = ClientOptions::parse(mongo_uri).await?;
-    opts.app_name = Some("pricecrowd-backend".into());
-    let client = Client::with_options(opts)?;
-
-    let db = client.database(&db_name);
+    // Инициализация Mongo через выделенный модуль
+    let client = crate::db::mongo::create_client(&mongo_uri, "pricecrowd-backend").await?;
+    let db = crate::db::mongo::get_database(&client, &db_name);
     let products: Collection<Product> = db.collection("products");
     let stores: Collection<Store> = db.collection("stores");
     let categories: Collection<Category> = db.collection("categories");

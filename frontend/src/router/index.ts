@@ -15,6 +15,7 @@ const CategoryForm = () => import('../views/CategoryForm.vue');
 const Login = () => import('../views/Login.vue');
 const Profile = () => import('../views/Profile.vue');
 const Rating = () => import('../views/Rating.vue');
+const Privacy = () => import('../views/Privacy.vue');
 
 const router = createRouter({
   history: createWebHistory(),
@@ -37,6 +38,7 @@ const router = createRouter({
     { path: '/login', name: 'login', component: Login },
     { path: '/profile', name: 'profile', component: Profile },
     { path: '/rating', name: 'rating', component: Rating },
+    { path: '/privacy', name: 'privacy', component: Privacy },
     { path: '/admin', name: 'admin', component: () => import('../views/Admin.vue'), meta: { requiresAdmin: true } },
     { path: '/:pathMatch(.*)*', redirect: '/' },
   ],

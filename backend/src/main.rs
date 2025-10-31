@@ -7,8 +7,12 @@ use tracing::info;
 mod models;
 mod state;
 mod handlers;
-mod routes;
-mod telegram;
+mod routes; // legacy routes (сохраняем для обратной совместимости)
+mod telegram; // legacy telegram module
+
+mod db; // новый модуль для БД (логическая декомпозиция)
+mod services; // слой сервисов
+mod router; // новый сборщик маршрутов
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -25,9 +29,12 @@ async fn main() -> anyhow::Result<()> {
     let state = state::init_from_env().await?;
 
     // Start Telegram poller (runs only when enabled in settings)
-    let _tg_handle = telegram::spawn_poller(state.clone());
+    // TODO: вынести в отдельный сервис позже (оркестрация интеграций)
+    let _tg_handle = services::telegram::spawn_poller(state.clone());
 
-    let app: Router = routes::build(state, uploads_dir);
+    // Новый способ сборки маршрутов с логическими "микросервисными" неймспейсами
+    // и сохранением всех текущих endpoint-ов без изменений путей
+    let app: Router = router::build_app(state, uploads_dir);
 
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
     info!("listening on http://{}", addr);
