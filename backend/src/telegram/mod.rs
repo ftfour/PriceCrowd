@@ -82,6 +82,27 @@ pub struct TelegramUser { #[allow(dead_code)] pub id: i64, #[allow(dead_code)] p
 #[derive(Serialize)]
 struct SendMessagePayload<'a> { chat_id: i64, text: &'a str }
 
+async fn send_scan_button(token: &str, chat_id: i64) -> anyhow::Result<()> {
+    #[derive(Serialize)]
+    struct Payload<'a> {
+        chat_id: i64,
+        text: &'a str,
+        reply_markup: serde_json::Value,
+    }
+    let url = format!("https://api.telegram.org/bot{}/sendMessage", token);
+    let markup = serde_json::json!({
+        "inline_keyboard": [[{
+            "text": "📷 Сканировать чек",
+            "web_app": { "url": "https://pricecrowd.ru/scan" }
+        }]]
+    });
+    let payload = Payload { chat_id, text: "Сканируй QR-код чека", reply_markup: markup };
+    let client = reqwest::Client::new();
+    let resp = client.post(&url).json(&payload).send().await?;
+    if !resp.status().is_success() { anyhow::bail!("sendMessage failed: status {:?}", resp.status()); }
+    Ok(())
+}
+
 // Webhook handler (оставим, но основной режим сейчас — polling)
 pub async fn webhook(State(state): State<AppState>, Json(update): Json<TelegramUpdate>) -> impl IntoResponse {
     let settings = match state.telegram_settings.find_one(doc!{"_id": "telegram"}, None).await { Ok(opt)=>opt, Err(e)=> { error!(?e, "get settings"); None } };

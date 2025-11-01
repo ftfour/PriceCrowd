@@ -188,3 +188,14 @@ pub struct TelegramSettingsUpdate {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub webhook_enabled: Option<bool>,
 }
+
+// Receipts (QR uploads)
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct Receipt {
+    #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
+    pub id: Option<ObjectId>,
+    pub qr: String,
+    pub timestamp: chrono::DateTime<chrono::Utc>,
+    pub source: String,
+    pub user: String,
+}

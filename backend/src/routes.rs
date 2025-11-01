@@ -1,15 +1,22 @@
 use axum::{Router, routing::{get, post, put}};
 use tower_http::cors::{Any, CorsLayer};
+use axum::http::HeaderValue;
 use tower_http::services::ServeDir;
 
 use crate::handlers;
 use crate::state::AppState;
 
 pub fn build(state: AppState, uploads_dir: String) -> Router {
-    let cors = CorsLayer::new()
-        .allow_origin(Any)
-        .allow_methods(Any)
-        .allow_headers(Any);
+    let cors = match std::env::var("CORS_ALLOWED_ORIGINS") {
+        Ok(list) => {
+            let origins: Vec<HeaderValue> = list
+                .split(',')
+                .filter_map(|s| HeaderValue::from_str(s.trim()).ok())
+                .collect();
+            if origins.is_empty() { CorsLayer::new().allow_origin(Any).allow_methods(Any).allow_headers(Any) } else { CorsLayer::new().allow_origin(origins).allow_methods(Any).allow_headers(Any) }
+        }
+        Err(_) => CorsLayer::new().allow_origin(Any).allow_methods(Any).allow_headers(Any),
+    };
 
     let static_service = ServeDir::new(&uploads_dir);
 
