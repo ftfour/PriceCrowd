@@ -53,7 +53,7 @@ async fn seed_admin(db: &mongodb::Database, _jwt_secret: &str) -> Result<()> {
     let hash = Argon2::default().hash_password(password.as_bytes(), &salt)
         .map_err(|e| anyhow::anyhow!(e.to_string()))?
         .to_string();
-    let user = User { id: None, username, password_hash: hash, role: "admin".into(), telegram_id: None, telegram_username: None };
+    let user = User { id: None, username, password_hash: hash, role: "admin".into(), telegram_id: None, telegram_username: None, points: Some(0) };
     users.insert_one(user, None).await?;
     info!("seeded admin user");
     Ok(())
