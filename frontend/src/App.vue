@@ -12,6 +12,7 @@
           <RouterLink to="/cart" class="text-gray-700 hover:text-black">Корзина</RouterLink>
           <RouterLink to="/about" class="text-gray-700 hover:text-black">О проекте</RouterLink>
           <RouterLink v-if="auth.isAdmin" to="/admin" class="text-gray-700 hover:text-black">Админка</RouterLink>
+          <RouterLink to="/scan" class="text-gray-700 hover:text-black">Сканер</RouterLink>
         </nav>
         <div class="flex items-center gap-3 text-sm">
           <template v-if="isAuthed">
@@ -40,6 +41,9 @@
 
     <footer class="mx-auto max-w-5xl px-4 py-8 text-xs text-gray-500">
       Vue 3 + Vite + Tailwind
+      <div class="mt-2">
+        <RouterLink to="/privacy" class="hover:underline">Политика конфиденциальности</RouterLink>
+      </div>
     </footer>
   </div>
 </template>

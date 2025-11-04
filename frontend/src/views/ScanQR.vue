@@ -1,10 +1,16 @@
 <template>
   <section class="p-4 space-y-4">
-    <h1 class="text-xl font-semibold">Сканирование QR чека</h1>
+    <h1 class="text-xl font-semibold">?????? QR-?????</h1>
 
-    <div class="rounded-lg overflow-hidden border bg-black aspect-video max-w-md">
+    <div class="relative rounded-lg overflow-hidden border bg-black aspect-video max-w-md">
       <video ref="videoEl" autoplay playsinline class="w-full h-full object-cover"></video>
+      <div class="pointer-events-none absolute inset-0 flex items-center justify-center">
+        <div class="scan-square"></div>
+      </div>
     </div>
+      <div class="pointer-events-none absolute inset-0 flex items-center justify-center">
+        <div class="scan-square"></div>
+      </div>
 
     <div v-if="qrText" class="p-3 rounded-md bg-green-50 border border-green-200 text-sm">
       <div class="font-medium">Распознано:</div>
@@ -15,9 +21,22 @@
       {{ statusMsg }}
     </div>
 
-    <div class="flex gap-2">
-      <button @click="closeApp" class="rounded-md bg-slate-700 text-white px-3 py-2 text-sm">Закрыть</button>
-      <button v-if="!scanning" @click="startScanner" class="rounded-md border px-3 py-2 text-sm">Сканировать снова</button>
+    <div class="flex flex-wrap gap-3 items-center">
+      <label class="inline-flex items-center gap-2 text-sm">
+        <input type="checkbox" v-model="multiMode" /> ??????-????
+      </label>
+      <button @click="closeApp" class="rounded-md bg-slate-700 text-white px-3 py-2 text-sm">???????</button>
+      <button v-if="!scanning" @click="startScanner" class="rounded-md border px-3 py-2 text-sm">????????? ??????</button>
+      <button v-else @click="stopStream" class="rounded-md border px-3 py-2 text-sm">??????????</button>
+      <button v-if="multiMode && scanned.length" @click="scanned=[]" class="rounded-md border px-3 py-2 text-sm">???????? ??????</button>
+    </div>
+
+    <div v-if="multiMode && scanned.length" class="rounded-md border bg-white p-3 text-xs">
+      <div class="font-medium mb-2">????????? ????? ({{ scanned.length }})</div>
+      <ul class="space-y-1 max-h-40 overflow-auto">
+        <li v-for="(s,i) in scanned" :key="i" class="break-all">{{ s }}</li>
+      </ul>
+    </div>
     </div>
 
     <canvas ref="canvasEl" class="hidden"></canvas>
@@ -37,6 +56,10 @@ const qrText = ref('');
 const statusMsg = ref('');
 const statusOk = ref(false);
 const scanning = ref(false);
+const multiMode = ref(false);
+const scanned = ref<string[]>([]);
+const seen = new Set<string>();
+let lastScanAt = 0;
 
 function getTelegramUserId(): string | null {
   try {
@@ -120,11 +143,26 @@ async function startScanner() {
       const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
       const result = jsQR(img.data as any, img.width, img.height);
       if (result && result.data) {
-        qrText.value = result.data;
-        stopStream();
-        scanning.value = false;
-        sendToBackend(result.data);
-        sendToTelegram(result.data);
+        const data = result.data;
+        if (multiMode.value) {
+          const now = Date.now();
+          if (!seen.has(data) || now - lastScanAt > 1500) {
+            seen.add(data);
+            lastScanAt = now;
+            qrText.value = data;
+            scanned.value.unshift(data);
+            if (scanned.value.length > 50) scanned.value.pop();
+            sendToBackend(data);
+            sendToTelegram(data);
+          }
+          rafId.value = requestAnimationFrame(scan);
+        } else {
+          qrText.value = data;
+          stopStream();
+          scanning.value = false;
+          sendToBackend(data);
+          sendToTelegram(data);
+        }
       } else {
         rafId.value = requestAnimationFrame(scan);
       }
@@ -150,5 +188,8 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .aspect-video { aspect-ratio: 16 / 9; }
+.scan-square { width: 60%; height: 60%; border: 2px solid rgba(255,255,255,0.9); border-radius: 8px; box-shadow: 0 0 0 9999px rgba(0,0,0,0.25) inset; }
 </style>
+
+
 

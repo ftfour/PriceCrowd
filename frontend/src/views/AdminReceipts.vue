@@ -19,6 +19,7 @@
             <th class="px-3 py-2 border-b w-48">Дата</th>
             <th class="px-3 py-2 border-b">QR-строка</th>
             <th class="px-3 py-2 border-b w-40">Источник</th>
+            <th class="px-3 py-2 border-b w-48">Действия</th>
           </tr>
         </thead>
         <tbody>
@@ -26,9 +27,19 @@
             <td class="px-3 py-2 border-b whitespace-nowrap">{{ formatDate(r.timestamp) }}</td>
             <td class="px-3 py-2 border-b break-all">{{ r.qr }}</td>
             <td class="px-3 py-2 border-b">{{ r.source }}</td>
+            <td class="px-3 py-2 border-b">
+              <button
+                class="inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-60"
+                :disabled="loading[i]"
+                @click="createOperation(r.qr, i)"
+              >
+                <span v-if="loading[i]" class="inline-block h-4 w-4 border-2 border-white/50 border-t-white rounded-full animate-spin"></span>
+                <span>{{ loading[i] ? 'Создание...' : 'Создать операцию' }}</span>
+              </button>
+            </td>
           </tr>
           <tr v-if="filtered.length===0">
-            <td colspan="3" class="px-3 py-6 text-center text-slate-500">Нет данных</td>
+            <td colspan="4" class="px-3 py-6 text-center text-slate-500">Нет данных</td>
           </tr>
         </tbody>
       </table>
@@ -41,11 +52,17 @@
 import { onMounted, onBeforeUnmount, ref, computed } from 'vue';
 import axios from 'axios';
 import { API } from '../api';
+import { getCheckByQR } from '../services/fnsApi';
+import { useOperationsStore } from '../stores/operations';
+import { useRouter } from 'vue-router';
 
 type Receipt = { qr: string; timestamp: string; source: string; user: string };
 const receipts = ref<Receipt[]>([]);
 const timer = ref<number | null>(null);
 const source = ref('');
+const loading = ref<Record<number, boolean>>({});
+const router = useRouter();
+const store = useOperationsStore();
 
 async function fetchReceipts() {
   try {
@@ -70,5 +87,30 @@ onMounted(async () => {
   timer.value = window.setInterval(fetchReceipts, 30000);
 });
 onBeforeUnmount(() => { if (timer.value) window.clearInterval(timer.value); });
+
+async function createOperation(qr: string, idx: number) {
+  try {
+    loading.value[idx] = true;
+    const { normalized: data, raw } = await getCheckByQR(qr);
+    const op = {
+      id: (globalThis.crypto?.randomUUID?.() || Math.random().toString(36).slice(2)),
+      date: data.dateTime,
+      seller: data.seller?.name || '—',
+      amount: (data.totalSum ?? 0) / 100,
+      items: (data.items ?? []).map((i: any) => ({
+        name: i.name,
+        price: (i.price ?? 0) / 100,
+        quantity: i.quantity ?? 1,
+      })),
+      status: 'draft' as const,
+      raw,\n      uploaded_by: receipts.value[idx]?.user || '',\n    };
+    store.add(op);
+    router.push('/admin/operations');
+  } catch (e: any) {
+    alert(e?.message || 'Не удалось создать операцию');
+  } finally {
+    loading.value[idx] = false;
+  }
+}
 </script>
 

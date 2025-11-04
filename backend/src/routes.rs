@@ -58,6 +58,7 @@ pub fn build(state: AppState, uploads_dir: String) -> Router {
         .route("/users", get(handlers::users::list_users).post(handlers::users::create_user))
         .route("/users/:id", put(handlers::users::update_user).delete(handlers::users::delete_user))
         .route("/settings/telegram/status", get(crate::telegram::status))
+        .route("/ratings/grant", post(handlers::ratings::award_points))
         .route("/upload", post(handlers::uploads::upload_file))
         .with_state(state.clone())
         .layer(admin_guard);

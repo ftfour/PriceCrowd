@@ -9,6 +9,10 @@
         <button :class="tabClass('telegram')" @click="tab='telegram'">Телеграм-бот</button>
         <button :class="tabClass('users')" @click="tab='users'">Пользователи</button>
         <button :class="tabClass('about')" @click="tab='about'">О системе</button>
+        <div class="ml-auto flex items-center gap-4">
+          <RouterLink to="/admin/receipts" class="text-gray-700 hover:text-black">Чеки</RouterLink>
+          <RouterLink to="/admin/operations" class="text-gray-700 hover:text-black">Операции</RouterLink>
+        </div>
       </nav>
       <div class="p-4">
         <TelegramSettings v-if="tab==='telegram'" />
