@@ -8,9 +8,6 @@
         <div class="scan-square"></div>
       </div>
     </div>
-      <div class="pointer-events-none absolute inset-0 flex items-center justify-center">
-        <div class="scan-square"></div>
-      </div>
 
     <div v-if="qrText" class="p-3 rounded-md bg-green-50 border border-green-200 text-sm">
       <div class="font-medium">Распознано:</div>
@@ -36,7 +33,6 @@
       <ul class="space-y-1 max-h-40 overflow-auto">
         <li v-for="(s,i) in scanned" :key="i" class="break-all">{{ s }}</li>
       </ul>
-    </div>
     </div>
 
     <canvas ref="canvasEl" class="hidden"></canvas>
