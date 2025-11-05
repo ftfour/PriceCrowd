@@ -118,6 +118,19 @@
       </table>
     </div>
   </section>
+    <!-- Modal for quick create forms -->
+    <div v-if="showModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div class="bg-white rounded-md shadow-xl w-[90vw] h-[90vh] overflow-hidden flex flex-col">
+        <div class="p-2 border-b flex items-center justify-between">
+          <div class="text-sm text-slate-700">??????? ??????????</div>
+          <div class="flex items-center gap-2">
+            <button class="rounded-md border px-2 py-1 text-sm" @click="onModalRefresh">???????? ??????</button>
+            <button class="rounded-md bg-slate-800 text-white px-2 py-1 text-sm" @click="closeModal">???????</button>
+          </div>
+        </div>
+        <iframe :src="modalUrl" class="flex-1"></iframe>
+      </div>
+    </div>
 </template>
 
 <script setup lang="ts">
@@ -139,7 +152,12 @@ const storeSelect = ref<Record<string, string>>({});
 const categories = ref<CategoryRef[]>([]);
 const catFilter = ref<Record<string, string>>({});
 const subcatFilter = ref<Record<string, string>>({});
-const pendingProducts = ref<Record<string, Record<number, string | null>>>({});
+  const pendingProducts = ref<Record<string, Record<number, string | null>>>({});
+  const showModal = ref(false);
+  const modalUrl = ref('');
+  function openModal(url: string) { modalUrl.value = url; showModal.value = true; }
+  function closeModal(){ showModal.value = false; }
+  function onModalRefresh(){ fetchStores(); fetchProducts(); }
 
 function toggle(id: string) {
   expanded.value[id] = !expanded.value[id];
