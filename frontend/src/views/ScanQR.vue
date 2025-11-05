@@ -1,6 +1,6 @@
 <template>
   <section class="p-4 space-y-4">
-    <h1 class="text-xl font-semibold">?????? QR-?????</h1>
+    <h1 class="text-xl font-semibold">Сканер QR-чеков</h1>
 
     <div class="relative rounded-lg overflow-hidden border bg-black aspect-video max-w-md">
       <video ref="videoEl" autoplay playsinline class="w-full h-full object-cover"></video>
@@ -20,16 +20,16 @@
 
     <div class="flex flex-wrap gap-3 items-center">
       <label class="inline-flex items-center gap-2 text-sm">
-        <input type="checkbox" v-model="multiMode" /> ??????-????
+        <input type="checkbox" v-model="multiMode" /> Мульти-скан
       </label>
-      <button @click="closeApp" class="rounded-md bg-slate-700 text-white px-3 py-2 text-sm">???????</button>
-      <button v-if="!scanning" @click="startScanner" class="rounded-md border px-3 py-2 text-sm">????????? ??????</button>
-      <button v-else @click="stopStream" class="rounded-md border px-3 py-2 text-sm">??????????</button>
-      <button v-if="multiMode && scanned.length" @click="scanned=[]" class="rounded-md border px-3 py-2 text-sm">???????? ??????</button>
+      <button @click="closeApp" class="rounded-md bg-slate-700 text-white px-3 py-2 text-sm">Закрыть</button>
+      <button v-if="!scanning" @click="startScanner" class="rounded-md border px-3 py-2 text-sm">Запустить сканер</button>
+      <button v-else @click="stopStream" class="rounded-md border px-3 py-2 text-sm">Остановить</button>
+      <button v-if="multiMode && scanned.length" @click="scanned=[]" class="rounded-md border px-3 py-2 text-sm">Очистить список</button>
     </div>
 
     <div v-if="multiMode && scanned.length" class="rounded-md border bg-white p-3 text-xs">
-      <div class="font-medium mb-2">????????? ????? ({{ scanned.length }})</div>
+      <div class="font-medium mb-2">Распознанные чеки ({{ scanned.length }})</div>
       <ul class="space-y-1 max-h-40 overflow-auto">
         <li v-for="(s,i) in scanned" :key="i" class="break-all">{{ s }}</li>
       </ul>
@@ -43,6 +43,7 @@
 import { onMounted, onBeforeUnmount, ref } from 'vue';
 import jsQR from 'jsqr';
 import { API } from '../api';
+import { getCheckByQR } from '../services/fnsApi';
 
 const videoEl = ref<HTMLVideoElement | null>(null);
 const canvasEl = ref<HTMLCanvasElement | null>(null);
@@ -67,28 +68,39 @@ function getTelegramUserId(): string | null {
 }
 
 async function sendToBackend(qr: string) {
-  try {
-    const user = getTelegramUserId() ?? 'anonymous';
-    const res = await fetch(`${API}/receipts/upload`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ qr, user, source: 'telegram_webapp' }),
-    });
-    const data = await res.json().catch(() => ({}));
-    if (res.ok && data?.status === 'ok') {
-      statusOk.value = true;
-      statusMsg.value = '✅ Чек отправлен';
-    } else {
-      statusOk.value = false;
-      statusMsg.value = 'Ошибка отправки на сервер';
-    }
-  } catch (e) {
+  const user = getTelegramUserId() ?? 'anonymous';
+  const res = await fetch(${API}/receipts/upload, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ qr, user, source: 'telegram_webapp' }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (res.ok && data?.status === 'ok') {
+    statusOk.value = true;
+    statusMsg.value = '??? ??????';
+  } else if (res.ok && data?.status === 'duplicate') {
     statusOk.value = false;
-    statusMsg.value = 'Сеть недоступна';
+    statusMsg.value = '??? ??? ??? ????????';
+  } else {
+    statusOk.value = false;
+    statusMsg.value = '?????? ??? ?????? ????';
   }
 }
 
-function sendToTelegram(qr: string) {
+async function verifyAndUpload(qr: string) {
+  try {
+    statusOk.value = false;
+    statusMsg.value = '????????? ???...';
+    await getCheckByQR(qr);
+    await sendToBackend(qr);
+  } catch (e) {
+    statusOk.value = false;
+    const msg = (e as any)?.message || '';
+    statusMsg.value = msg ? ???????? ?? ??????:  : '???????? ?? ??????';
+  }
+}
+
+function sendToTelegram function sendToTelegram(qr: string) {
   try {
     const w = window as any;
     if (w?.Telegram?.WebApp?.sendData) {
@@ -148,7 +160,7 @@ async function startScanner() {
             qrText.value = data;
             scanned.value.unshift(data);
             if (scanned.value.length > 50) scanned.value.pop();
-            sendToBackend(data);
+            verifyAndUpload(data);
             sendToTelegram(data);
           }
           rafId.value = requestAnimationFrame(scan);
@@ -156,7 +168,7 @@ async function startScanner() {
           qrText.value = data;
           stopStream();
           scanning.value = false;
-          sendToBackend(data);
+          verifyAndUpload(data);
           sendToTelegram(data);
         }
       } else {
@@ -172,7 +184,6 @@ async function startScanner() {
 }
 
 onMounted(() => {
-  // Try to expand WebApp viewport if available
   try { (window as any)?.Telegram?.WebApp?.expand?.(); } catch {}
   startScanner();
 });
@@ -184,8 +195,13 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .aspect-video { aspect-ratio: 16 / 9; }
-.scan-square { width: 60%; height: 60%; border: 2px solid rgba(255,255,255,0.9); border-radius: 8px; box-shadow: 0 0 0 9999px rgba(0,0,0,0.25) inset; }
+.scan-square {
+  width: 60%;
+  height: 60%;
+  border: 2px solid rgba(255,255,255,0.9);
+  border-radius: 8px;
+  box-shadow: 0 0 0 9999px rgba(0,0,0,0.25) inset;
+}
 </style>
-
 
 

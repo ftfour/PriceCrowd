@@ -22,11 +22,18 @@ pub fn routes(state: AppState) -> Router {
     // ensure index on timestamp desc for efficient listing
     let receipts = state.db.collection::<Receipt>("receipts");
     let _ = tokio::spawn(async move {
-        let idx = IndexModel::builder()
+        // Index for listing
+        let idx_ts = IndexModel::builder()
             .keys(bson::doc!{"timestamp": -1})
             .options(IndexOptions::builder().name(Some("ts_desc".to_string())).build())
             .build();
-        let _ = receipts.create_index(idx, None).await;
+        let _ = receipts.create_index(idx_ts, None).await;
+        // Unique index to prevent duplicate QR uploads
+        let idx_qr = IndexModel::builder()
+            .keys(bson::doc!{"qr": 1})
+            .options(IndexOptions::builder().name(Some("qr_unique".to_string())).unique(true).build())
+            .build();
+        let _ = receipts.create_index(idx_qr, None).await;
     });
 
     Router::new()
@@ -60,9 +67,21 @@ pub async fn upload_qr(
     };
 
     let col = state.db.collection::<Receipt>("receipts");
+    // Reject duplicates early
+    if let Ok(Some(_)) = col.find_one(bson::doc!{"qr": &rec.qr}, None).await {
+        return (StatusCode::OK, Json(bson::doc!{"status": "duplicate"}));
+    }
     match col.insert_one(rec, None).await {
         Ok(_) => (StatusCode::OK, Json(bson::doc!{"status": "ok"})),
-        Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, Json(bson::doc!{"status": "error"})),
+        Err(e) => {
+            // If unique index violation, treat as duplicate
+            let msg = e.to_string();
+            if msg.contains("E11000") || msg.contains("duplicate key") {
+                (StatusCode::OK, Json(bson::doc!{"status": "duplicate"}))
+            } else {
+                (StatusCode::INTERNAL_SERVER_ERROR, Json(bson::doc!{"status": "error"}))
+            }
+        }
     }
 }
 
