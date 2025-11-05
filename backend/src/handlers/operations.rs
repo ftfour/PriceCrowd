@@ -13,6 +13,8 @@ pub struct CreateOperationBody {
     pub items: Vec<OperationItem>,
     pub qr: Option<String>,
     pub uploaded_by: Option<String>,
+    #[serde(default)]
+    pub raw: Option<serde_json::Value>,
 }
 
 pub async fn create_operation(State(state): State<AppState>, Json(body): Json<CreateOperationBody>) -> impl IntoResponse {
@@ -27,7 +29,7 @@ pub async fn create_operation(State(state): State<AppState>, Json(body): Json<Cr
     if let Some(qr) = &body.qr {
         match col.find_one(doc!{"qr": qr}, None).await { Ok(Some(_)) => return (StatusCode::CONFLICT, Json(serde_json::json!({"error": "qr_used"}))).into_response(), _=>{} }
     }
-    let op = Operation { id: None, date: body.date, seller: body.seller, amount: body.amount, items: body.items, status: "draft".into(), store_id: None, qr: body.qr, uploaded_by: body.uploaded_by };
+    let op = Operation { id: None, date: body.date, seller: body.seller, amount: body.amount, items: body.items, status: "draft".into(), store_id: None, qr: body.qr, uploaded_by: body.uploaded_by, raw: body.raw.map(|v| bson::to_bson(&v).unwrap_or(bson::Bson::Null)) };
     match col.insert_one(op, None).await {
         Ok(res) => {
             let id = match res.inserted_id { bson::Bson::ObjectId(oid)=> oid, _=> ObjectId::new() };

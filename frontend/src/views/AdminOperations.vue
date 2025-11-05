@@ -81,7 +81,30 @@
             <button class="rounded-md border px-2 py-1" @click="closeModal">Закрыть</button>
           </div>
         </div>
-        <iframe :src="modalUrl" class="flex-1"></iframe>
+        <div class="p-4 overflow-auto flex-1">
+          <div v-if="modalKind==='stores'" class="max-w-md space-y-3">
+            <label class="block text-sm">
+              <span class="block mb-1">Название магазина</span>
+              <input v-model="quickStoreName" class="w-full border rounded px-3 py-2 text-sm" />
+            </label>
+            <label class="block text-sm">
+              <span class="block mb-1">Адрес (необязательно)</span>
+              <input v-model="quickStoreAddr" class="w-full border rounded px-3 py-2 text-sm" />
+            </label>
+            <div class="pt-2">
+              <button class="px-3 py-1.5 rounded-md text-white bg-blue-600 hover:bg-blue-700" @click="submitQuickStore">Создать</button>
+            </div>
+          </div>
+          <div v-else-if="modalKind==='products'" class="max-w-md space-y-3">
+            <label class="block text-sm">
+              <span class="block mb-1">Название товара</span>
+              <input v-model="quickProductTitle" class="w-full border rounded px-3 py-2 text-sm" />
+            </label>
+            <div class="pt-2">
+              <button class="px-3 py-1.5 rounded-md text-white bg-blue-600 hover:bg-blue-700" @click="submitQuickProduct">Создать</button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </section>
@@ -104,6 +127,9 @@ const productQuery = ref<Record<string, Record<number, string>>>({});
 const showModal = ref(false);
 const modalUrl = ref('');
 const modalKind = ref<'stores'|'products'|''>('');
+const quickStoreName = ref('');
+const quickStoreAddr = ref('');
+const quickProductTitle = ref('');
 
 function getId(o: any){ return (typeof o._id==='string'? o._id : o._id?.$oid) || o.id; }
 function formatDate(iso: string){ try { return new Date(iso).toLocaleString(); } catch { return iso; } }
@@ -170,11 +196,28 @@ function openModal(url: string, kind: 'stores'|'products'){
   modalUrl.value = url;
   modalKind.value = kind;
   showModal.value = true;
+  if (kind==='stores') { quickStoreName.value = ''; quickStoreAddr.value=''; }
+  if (kind==='products') { quickProductTitle.value = ''; }
 }
 function closeModal(){
   showModal.value = false;
   if (modalKind.value === 'stores') loadStores();
   if (modalKind.value === 'products') loadProducts();
+}
+
+async function submitQuickStore(){
+  try {
+    await fetch(`${API}/stores`, { method:'POST', headers: authHeaders({ 'Content-Type':'application/json' }), body: JSON.stringify({ name: quickStoreName.value, addr: quickStoreAddr.value||'' }) });
+    await loadStores();
+    showModal.value = false;
+  } catch {}
+}
+async function submitQuickProduct(){
+  try {
+    await fetch(`${API}/products`, { method:'POST', headers: authHeaders({ 'Content-Type':'application/json' }), body: JSON.stringify({ title: quickProductTitle.value, desc:'' }) });
+    await loadProducts();
+    showModal.value = false;
+  } catch {}
 }
 
 onMounted(()=>{ loadOps(); loadStores(); loadProducts(); });

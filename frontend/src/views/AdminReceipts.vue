@@ -113,6 +113,7 @@ async function createOperation(qr: string, idx: number) {
         items: (data.items ?? []).map((i: any) => ({ name: i.name, price: (i.price ?? 0) / 100, quantity: i.quantity ?? 1 })),
         qr,
         uploaded_by: user || null,
+        raw,
       }),
     });
     if (!res.ok) {
