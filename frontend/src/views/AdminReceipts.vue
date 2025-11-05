@@ -27,7 +27,7 @@
             <td class="px-3 py-2 border-b whitespace-nowrap">{{ formatDate(r.timestamp) }}</td>
             <td class="px-3 py-2 border-b break-all">
               {{ r.qr }}
-              <span v-if="used.has(r.qr)" class="ml-2 text-xs text-slate-500">— уже в операциях</span>
+              <span v-if="used.has(r.qr)" class="ml-2 text-xs text-slate-500">� ??? ? ?????????</span> <span v-if="blockedUsers.has(r.user)" class="ml-2 text-xs text-slate-500">� ? ???????????? ???? ????????</span>
             </td>
             <td class="px-3 py-2 border-b">{{ r.source }}</td>
             <td class="px-3 py-2 border-b">
@@ -94,7 +94,7 @@ onBeforeUnmount(() => { if (timer.value) window.clearInterval(timer.value); });
 
 async function createOperation(qr: string, idx: number) {
   try {
-    if (used.value.has(qr)) return;
+    if (used.value.has(qr)) return; const user = receipts.value[idx]?.user || ""; if (user && blockedUsers.value.has(user)) { alert("? ????? ???????????? ??? ???? ????????"); return; }
     loading.value[idx] = true;
     const { normalized: data, raw } = await getCheckByQR(qr);
     const op = {
@@ -121,5 +121,8 @@ async function createOperation(qr: string, idx: number) {
   }
 }
 </script>
+
+
+
 
 
