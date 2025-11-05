@@ -35,7 +35,7 @@
                 <option value="">—</option>
                 <option v-for="s in stores" :key="s.id" :value="s.id">{{ s.name }}</option>
               </select>
-              <button class="ml-2 px-2 py-1 rounded-md border text-xs" @click="saveStore(o)">Сохранить</button>
+              <button class="ml-2 px-2 py-1 rounded-md border text-xs" @click="saveStore(o)">?????????</button> <button class="ml-2 px-2 py-1 rounded-md border text-xs" @click="openModalStore(o.seller)">????? ??????? (?? ????????)</button>
             </td>
             <td class="px-3 py-2 border-b">
               <button class="mr-2 px-3 py-1.5 rounded-md text-white bg-green-600 hover:bg-green-700" @click="postOperation(o)">Опубликовать</button>
@@ -56,6 +56,7 @@
                       <option :value="null">—</option>
                       <option v-for="p in filteredProducts(o, idx)" :key="p.id" :value="p.id">{{ p.title }}</option>
                     </select>
+                    <button class="mt-1 px-2 py-1 rounded-md border text-xs" @click="openModalProduct(it.name)">????? ????? (?? ????????)</button>
                   </div>
                 </div>
               </div>
@@ -169,6 +170,11 @@ async function postOperation(o: Op){
 
 async function deleteOperation(o: Op){
   const id = getId(o as any);
+  if (!confirm("??????? ?????????")) return;
+  try { await fetch(`${API}/operations/${id}`, { method: "DELETE", headers: authHeaders() }); await loadOps(); } catch {}
+}
+{
+  const id = getId(o as any);
   if (!confirm('Удалить операцию?')) return;
   try { await fetch(`${API}/operations/${id}/status`, { method: 'PUT', headers: authHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify({ status: 'deleted' }) }); await loadOps(); } catch {}
 }
@@ -201,9 +207,19 @@ function openModal(url: string, kind: 'stores'|'products'){
 }
 function closeModal(){
   showModal.value = false;
-  if (modalKind.value === 'stores') loadStores();
-  if (modalKind.value === 'products') loadProducts();
+  if (modalKind.value === "stores") loadStores();
+  if (modalKind.value === "products") loadProducts();
 }
+
+function openModalStore(name){
+  openModal("/stores/new","stores");
+  try { quickStoreName.value = String(name||""); } catch {}
+}
+function openModalProduct(title){
+  openModal("/products/new","products");
+  try { quickProductTitle.value = String(title||""); } catch {}
+}
+
 
 async function submitQuickStore(){
   try {
@@ -222,3 +238,7 @@ async function submitQuickProduct(){
 
 onMounted(()=>{ loadOps(); loadStores(); loadProducts(); });
 </script>
+
+
+
+

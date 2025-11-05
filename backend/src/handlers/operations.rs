@@ -88,3 +88,13 @@ pub async fn update_operation(State(state): State<AppState>, Path(id): Path<Stri
         Err(e) => { error!(?e, "update operation failed"); StatusCode::INTERNAL_SERVER_ERROR.into_response() }
     }
 }
+
+pub async fn delete_operation(State(state): State<AppState>, Path(id): Path<String>) -> impl IntoResponse {
+    let Ok(oid) = ObjectId::parse_str(&id) else { return StatusCode::BAD_REQUEST.into_response(); };
+    let col = state.db.collection::<Operation>("operations");
+    match col.delete_one(doc!{"_id": oid}, None).await {
+        Ok(r) if r.deleted_count == 1 => StatusCode::NO_CONTENT.into_response(),
+        Ok(_) => StatusCode::NOT_FOUND.into_response(),
+        Err(e) => { error!(?e, "delete operation failed"); StatusCode::INTERNAL_SERVER_ERROR.into_response() }
+    }
+}
