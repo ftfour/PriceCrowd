@@ -170,8 +170,8 @@ async function postOperation(o: Op){
 
 async function deleteOperation(o: Op){
   const id = getId(o as any);
-  if (!confirm('??????? ?????????')) return;
-  try { await fetch(${API}/operations/, { method: 'DELETE', headers: authHeaders() }); await loadOps(); } catch {}
+  if (!confirm('Удалить операцию?')) return;
+  try { await fetch(`${API}/operations/${id}`, { method: 'DELETE', headers: authHeaders() }); await loadOps(); } catch {}
 }
 
 async function saveStore(o: Op){
