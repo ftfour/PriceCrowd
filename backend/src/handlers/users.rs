@@ -36,12 +36,13 @@ pub async fn create_user(State(state): State<AppState>, Json(body): Json<CreateU
     if body.username.trim().is_empty() || body.password.len() < 4 { return StatusCode::BAD_REQUEST.into_response(); }
     let salt = SaltString::generate(&mut rand::thread_rng());
     let hash = match Argon2::default().hash_password(body.password.as_bytes(), &salt) { Ok(h)=>h.to_string(), Err(e)=> { error!(?e, "hash_password failed"); return StatusCode::INTERNAL_SERVER_ERROR.into_response(); } };
+    let uname = body.username.clone();
     let user = User { id: None, username: body.username, password_hash: hash, role: "user".into(), telegram_id: None, telegram_username: None, points: Some(0) };
     let coll = state.db.collection::<User>("users");
     match coll.insert_one(user, None).await {
         Ok(res) => {
             let id = match res.inserted_id { bson::Bson::ObjectId(oid)=> oid, _=> ObjectId::new() };
-            let _ = crate::handlers::events::log_event(&state, "user_registered", "Зарегистрирован пользователь", Some(body.username.clone())).await;
+            let _ = crate::handlers::events::log_event(&state, "user_registered", "Зарегистрирован пользователь", Some(uname)).await;
             Json(serde_json::json!({"_id": id})).into_response()
         }
         Err(e) => { error!(?e, "insert user failed"); StatusCode::CONFLICT.into_response() }
