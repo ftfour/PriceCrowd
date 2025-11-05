@@ -39,7 +39,8 @@ pub async fn create_operation(State(state): State<AppState>, Json(body): Json<Cr
 
 pub async fn list_operations(State(state): State<AppState>) -> impl IntoResponse {
     let col = state.db.collection::<Operation>("operations");
-    let mut cur = match col.find(None, None).await { Ok(c)=>c, Err(e)=> { error!(?e, "ops.find failed"); return StatusCode::INTERNAL_SERVER_ERROR.into_response(); } };
+    let opts = mongodb::options::FindOptions::builder().sort(doc!{"date": -1}).limit(200).build();
+    let mut cur = match col.find(None, opts).await { Ok(c)=>c, Err(e)=> { error!(?e, "ops.find failed"); return StatusCode::INTERNAL_SERVER_ERROR.into_response(); } };
     let mut out = Vec::new();
     while let Some(n) = cur.next().await { match n { Ok(op)=> out.push(op), Err(e)=> { error!(?e, "ops cursor"); return StatusCode::INTERNAL_SERVER_ERROR.into_response(); } } }
     Json(out).into_response()

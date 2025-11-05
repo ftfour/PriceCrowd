@@ -18,7 +18,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="o in ops" :key="o._id || o.id" class="hover:bg-slate-50">
+          <tr v-for="o in ops" :key="o._id || o.id" class="hover:bg-slate-50 align-top">
             <td class="px-3 py-2 border-b whitespace-nowrap">{{ formatDate(o.date) }}</td>
             <td class="px-3 py-2 border-b">{{ o.seller }}</td>
             <td class="px-3 py-2 border-b">{{ money(o.amount) }}</td>
@@ -37,6 +37,29 @@
               <button class="px-3 py-1.5 rounded-md text-white bg-red-600 hover:bg-red-700" @click="deleteOperation(o)">Удалить</button>
             </td>
           </tr>
+          <tr v-for="o in ops" :key="(o._id || o.id)+'-items'">
+            <td colspan="6" class="px-3 py-2 border-b bg-slate-50">
+              <div class="text-sm text-slate-700 mb-2">Позиции</div>
+              <div class="space-y-2">
+                <div v-for="(it, idx) in edited[o._id || o.id]?.items || []" :key="idx" class="grid grid-cols-12 gap-2 items-center">
+                  <div class="col-span-5 truncate">{{ it.name }}</div>
+                  <div class="col-span-2 text-right">{{ money(it.price) }}</div>
+                  <div class="col-span-1 text-right">{{ it.quantity }}</div>
+                  <div class="col-span-4">
+                    <input type="text" v-model="productQuery[o._id || o.id][idx]" placeholder="Поиск товара..." class="w-full border rounded px-2 py-1 text-sm" />
+                    <select v-model="edited[o._id || o.id].items[idx].product_id" class="mt-1 w-full border rounded px-2 py-1 text-sm bg-white text-slate-900">
+                      <option :value="null">—</option>
+                      <option v-for="p in filteredProducts(o, idx)" :key="p.id" :value="p.id">{{ p.title }}</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+              <div class="mt-3 flex items-center gap-2">
+                <button class="px-3 py-1.5 rounded-md text-white bg-blue-600 hover:bg-blue-700" @click="saveItems(o)">Сохранить позиции</button>
+                <span class="text-xs text-slate-500">Назначьте товары для строк операции и сохраните</span>
+              </div>
+            </td>
+          </tr>
           <tr v-if="ops.length===0">
             <td colspan="6" class="px-3 py-6 text-center text-slate-500">Пока нет операций</td>
           </tr>
@@ -52,10 +75,14 @@ import { API, authHeaders } from '../api';
 
 type Op = { _id?: string; id?: string; date: string; seller: string; amount: number; status: 'draft'|'posted'|'deleted'; store_id?: string|null };
 type StoreRef = { id: string; name: string };
+type ProductRef = { id: string; title: string };
 
 const ops = ref<Op[]>([]);
 const stores = ref<StoreRef[]>([]);
 const storeSelect = ref<Record<string, string>>({});
+const products = ref<ProductRef[]>([]);
+const edited = ref<Record<string, { items: { name:string; price:number; quantity:number; product_id: string | null }[] }>>({});
+const productQuery = ref<Record<string, Record<number, string>>>({});
 
 function getId(o: any){ return (typeof o._id==='string'? o._id : o._id?.$oid) || o.id; }
 function formatDate(iso: string){ try { return new Date(iso).toLocaleString(); } catch { return iso; } }
@@ -66,7 +93,13 @@ async function loadOps(){
     const res = await fetch(`${API}/operations`, { headers: authHeaders() });
     const data = await res.json();
     ops.value = (Array.isArray(data)? data: []).map((o: any)=> ({ _id: getId(o), date: o.date, seller: o.seller, amount: o.amount, status: o.status, store_id: (typeof o.store_id==='string'? o.store_id : o.store_id?.$oid) || null }));
-    for (const o of ops.value){ const id = getId(o as any); if (o.store_id) storeSelect.value[id] = o.store_id; }
+    for (const oraw of (Array.isArray(data)? data: [])){
+      const id = getId(oraw);
+      if ((typeof oraw.store_id==='string'? oraw.store_id : oraw.store_id?.$oid)) storeSelect.value[id] = (typeof oraw.store_id==='string'? oraw.store_id : oraw.store_id?.$oid);
+      const items = (oraw.items || []).map((i:any)=> ({ name: i.name, price: i.price, quantity: i.quantity, product_id: (typeof i.product_id==='string'? i.product_id : i.product_id?.$oid) || null }));
+      edited.value[id] = { items };
+      productQuery.value[id] = {} as any;
+    }
   } catch {}
 }
 
@@ -76,6 +109,10 @@ async function loadStores(){
     const data = await res.json();
     stores.value = (Array.isArray(data)? data: []).map((s:any)=> ({ id: (typeof s._id==='string'? s._id : s._id?.$oid) || '', name: s.name }));
   } catch {}
+}
+
+async function loadProducts(){
+  try { const res = await fetch(`${API}/products`); const data = await res.json(); products.value = (Array.isArray(data)? data: []).map((p:any)=> ({ id: (typeof p._id==='string'? p._id : p._id?.$oid) || '', title: p.title })); } catch {}
 }
 
 async function postOperation(o: Op){
@@ -95,5 +132,18 @@ async function saveStore(o: Op){
   try { await fetch(`${API}/operations/${id}`, { method: 'PUT', headers: authHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify({ store_id: sid }) }); await loadOps(); } catch {}
 }
 
-onMounted(()=>{ loadOps(); loadStores(); });
+function filteredProducts(o: any, idx: number): ProductRef[]{
+  const id = getId(o);
+  const q = (productQuery.value[id]?.[idx] || '').toLowerCase();
+  if (!q) return products.value;
+  return products.value.filter(p => p.title.toLowerCase().includes(q));
+}
+
+async function saveItems(o: any){
+  const id = getId(o);
+  const payload = { items: edited.value[id]?.items || [] };
+  try { await fetch(`${API}/operations/${id}`, { method: 'PUT', headers: authHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify(payload) }); alert('Позиции сохранены'); } catch{}
+}
+
+onMounted(()=>{ loadOps(); loadStores(); loadProducts(); });
 </script>

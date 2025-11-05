@@ -56,7 +56,6 @@ import { onMounted, onBeforeUnmount, ref, computed } from 'vue';
 import axios from 'axios';
 import { API, authHeaders } from '../api';
 import { getCheckByQR } from '../services/fnsApi';
-import { useOperationsStore } from '../stores/operations';
 import { useRouter } from 'vue-router';
 
 type Receipt = { qr: string; timestamp: string; source: string; user: string };
@@ -65,12 +64,12 @@ const timer = ref<number | null>(null);
 const source = ref('');
 const loading = ref<Record<number, boolean>>({});
 const router = useRouter();
-const store = useOperationsStore();
-const used = computed(() => new Set((store.operations || []).map(o => (o as any).qr).filter(Boolean) as string[]));
-const blockedUsers = computed(() => new Set((store.operations || [])
-  .filter(o => (o as any).status !== 'deleted')
-  .map(o => (o as any).uploaded_by)
-  .filter(Boolean) as string[]));
+const ops = ref<any[]>([]);
+const used = computed(() => new Set((ops.value || []).map(o => (typeof o.qr==='string'? o.qr : '')).filter(Boolean)));
+const blockedUsers = computed(() => new Set((ops.value || [])
+  .filter(o => o.status !== 'deleted')
+  .map(o => o.uploaded_by)
+  .filter((u: any) => typeof u === 'string' && u.length>0)));
 
 async function fetchReceipts() {
   try {
@@ -92,6 +91,7 @@ function formatDate(iso: string) {
 
 onMounted(async () => {
   await fetchReceipts();
+  try { const res = await fetch(`${API}/operations`, { headers: authHeaders() }); ops.value = await res.json(); } catch {}
   timer.value = window.setInterval(fetchReceipts, 30000);
 });
 onBeforeUnmount(() => { if (timer.value) window.clearInterval(timer.value); });
@@ -123,18 +123,8 @@ async function createOperation(qr: string, idx: number) {
       }
       throw new Error(`Ошибка сервера: ${res.status}`);
     }
-    const op = {
-      id: (globalThis.crypto?.randomUUID?.() || Math.random().toString(36).slice(2)),
-      date: data.dateTime,
-      seller: data.seller?.name || '',
-      amount: (data.totalSum ?? 0) / 100,
-      items: (data.items ?? []).map((i: any) => ({ name: i.name, price: (i.price ?? 0) / 100, quantity: i.quantity ?? 1 })),
-      qr,
-      status: 'draft' as const,
-      raw,
-      uploaded_by: user,
-    } as any;
-    store.add(op);
+    // обновим кэш операций для подсказок
+    try { const res2 = await fetch(`${API}/operations`, { headers: authHeaders() }); ops.value = await res2.json(); } catch {}
     router.push('/admin/operations');
   } catch (e: any) {
     alert(e?.message || 'Не удалось создать операцию');
