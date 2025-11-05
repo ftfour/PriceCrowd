@@ -71,8 +71,8 @@ pub async fn upload_qr(
     if let Ok(Some(_)) = col.find_one(bson::doc!{"qr": &rec.qr}, None).await {
         return (StatusCode::OK, Json(bson::doc!{"status": "duplicate"}));
     }
-    match col.insert_one(rec, None).await {
-        Ok(_) => (StatusCode::OK, Json(bson::doc!{"status": "ok"})),
+    match col.insert_one(rec.clone(), None).await {
+        Ok(_) => { let _ = crate::handlers::events::log_event(&state, "receipt_uploaded", "Загружен чек", Some(rec.user.clone())).await; (StatusCode::OK, Json(bson::doc!{"status": "ok"})) },
         Err(e) => {
             // If unique index violation, treat as duplicate
             let msg = e.to_string();

@@ -38,9 +38,10 @@ pub async fn award_points(State(state): State<AppState>, Json(body): Json<AwardP
     let filter = doc!{"username": &body.username };
     let update = doc!{"$inc": {"points": body.delta }};
     match coll.update_one(filter, update, None).await {
-        Ok(r) if r.matched_count > 0 => StatusCode::NO_CONTENT.into_response(),
+        Ok(r) if r.matched_count > 0 => { let _ = crate::handlers::events::log_event(&state, "receipt_verified", "??? ???????????", Some(body.username)).await; StatusCode::NO_CONTENT.into_response() },
         Ok(_) => StatusCode::NOT_FOUND.into_response(),
         Err(e) => { error!(?e, "award_points failed"); StatusCode::INTERNAL_SERVER_ERROR.into_response() }
     }
 }
+
 

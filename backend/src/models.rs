@@ -201,3 +201,15 @@ pub struct Receipt {
     pub source: String,
     pub user: String,
 }
+
+// Generic app events
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct EventDoc {
+    #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
+    pub id: Option<ObjectId>,
+    pub ts_ms: i64,
+    pub kind: String, // receipt_uploaded | receipt_verified | user_registered | other
+    pub message: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub user: Option<String>,
+}

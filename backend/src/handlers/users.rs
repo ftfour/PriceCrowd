@@ -41,6 +41,7 @@ pub async fn create_user(State(state): State<AppState>, Json(body): Json<CreateU
     match coll.insert_one(user, None).await {
         Ok(res) => {
             let id = match res.inserted_id { bson::Bson::ObjectId(oid)=> oid, _=> ObjectId::new() };
+            let _ = crate::handlers::events::log_event(&state, "user_registered", "Зарегистрирован пользователь", Some(body.username.clone())).await;
             Json(serde_json::json!({"_id": id})).into_response()
         }
         Err(e) => { error!(?e, "insert user failed"); StatusCode::CONFLICT.into_response() }
