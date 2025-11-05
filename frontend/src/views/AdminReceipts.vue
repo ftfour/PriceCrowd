@@ -54,7 +54,7 @@
 <script setup lang="ts">
 import { onMounted, onBeforeUnmount, ref, computed } from 'vue';
 import axios from 'axios';
-import { API } from '../api';
+import { API, authHeaders } from '../api';
 import { getCheckByQR } from '../services/fnsApi';
 import { useOperationsStore } from '../stores/operations';
 import { useRouter } from 'vue-router';
@@ -95,8 +95,7 @@ onBeforeUnmount(() => { if (timer.value) window.clearInterval(timer.value); });
 async function createOperation(qr: string, idx: number) {
   try {
     if (used.value.has(qr)) return; const user = receipts.value[idx]?.user || ""; if (user && blockedUsers.value.has(user)) { alert("? ????? ???????????? ??? ???? ????????"); return; }
-    loading.value[idx] = true;
-    const { normalized: data, raw } = await getCheckByQR(qr);
+    loading.value[idx] = true; const { normalized: data, raw } = await getCheckByQR(qr);\n    try {\n      const res = await fetch(${API}/operations, { method: 'POST', headers: authHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify({ date: data.dateTime, seller: data.seller?.name || '', amount: (data.totalSum ?? 0) / 100, items: (data.items ?? []).map((i: any) => ({ name: i.name, price: (i.price ?? 0) / 100, quantity: i.quantity ?? 1 })), qr, uploaded_by: user || null }) });\n      if (!res.ok) { if (res.status === 409) { const j = await res.json().catch(() => ({})); if (j?.error === 'user_has_operation') { alert('? ???????????? ??? ???? ????????'); return; } if (j?.error === 'qr_used') { alert('???? ??? ??? ???????????'); return; } } throw new Error(?????? ???????: ); }\n    } catch (e) { alert((e as any)?.message || '?? ??????? ??????? ???????? ?? ???????'); return; }
     const op = {
       id: (globalThis.crypto?.randomUUID?.() || Math.random().toString(36).slice(2)),
       date: data.dateTime,
@@ -121,6 +120,8 @@ async function createOperation(qr: string, idx: number) {
   }
 }
 </script>
+
+
 
 
 

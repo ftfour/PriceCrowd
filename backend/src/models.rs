@@ -213,3 +213,30 @@ pub struct EventDoc {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub user: Option<String>,
 }
+
+// Operations (created from receipts)
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct OperationItem {
+    pub name: String,
+    pub price: f64,
+    pub quantity: f64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub product_id: Option<ObjectId>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct Operation {
+    #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
+    pub id: Option<ObjectId>,
+    pub date: String,
+    pub seller: String,
+    pub amount: f64,
+    pub items: Vec<OperationItem>,
+    pub status: String, // draft | posted | deleted
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub store_id: Option<ObjectId>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub qr: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub uploaded_by: Option<String>,
+}

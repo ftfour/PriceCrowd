@@ -11,4 +11,5 @@ pub mod users;
 pub mod ratings;
 pub mod events;
 pub mod dev;
+pub mod operations;
 // telegram status endpoint is in module telegram
