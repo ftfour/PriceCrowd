@@ -57,3 +57,31 @@ pub async fn update_status(State(state): State<AppState>, Path(id): Path<String>
         Err(e) => { error!(?e, "update status failed"); StatusCode::INTERNAL_SERVER_ERROR.into_response() }
     }
 }
+
+#[derive(serde::Deserialize)]
+pub struct OperationUpdateBody {
+    #[serde(default)]
+    pub store_id: Option<String>,
+    #[serde(default)]
+    pub items: Option<Vec<OperationItem>>,
+}
+
+pub async fn update_operation(State(state): State<AppState>, Path(id): Path<String>, Json(body): Json<OperationUpdateBody>) -> impl IntoResponse {
+    let Ok(oid) = ObjectId::parse_str(&id) else { return StatusCode::BAD_REQUEST.into_response(); };
+    let mut set = doc!{};
+    if let Some(sid) = body.store_id {
+        if !sid.is_empty() {
+            if let Ok(soid) = ObjectId::parse_str(&sid) { set.insert("store_id", soid); }
+        } else {
+            set.insert("store_id", bson::Bson::Null);
+        }
+    }
+    if let Some(items) = body.items { set.insert("items", bson::to_bson(&items).unwrap_or(bson::Bson::Null)); }
+    if set.is_empty() { return StatusCode::BAD_REQUEST.into_response(); }
+    let col = state.db.collection::<Operation>("operations");
+    match col.update_one(doc!{"_id": oid}, doc!{"$set": set}, None).await {
+        Ok(r) if r.matched_count>0 => StatusCode::NO_CONTENT.into_response(),
+        Ok(_) => StatusCode::NOT_FOUND.into_response(),
+        Err(e) => { error!(?e, "update operation failed"); StatusCode::INTERNAL_SERVER_ERROR.into_response() }
+    }
+}

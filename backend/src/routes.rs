@@ -62,6 +62,7 @@ pub fn build(state: AppState, uploads_dir: String) -> Router {
         .route("/dev/clear", post(handlers::dev::clear_all))
         .route("/ratings/grant", post(handlers::ratings::award_points))
         .route("/operations", get(handlers::operations::list_operations).post(handlers::operations::create_operation))
+        .route("/operations/:id", put(handlers::operations::update_operation))
         .route("/operations/:id/status", put(handlers::operations::update_status))
         .route("/upload", post(handlers::uploads::upload_file))
         .with_state(state.clone())
