@@ -34,6 +34,7 @@
               <td class="px-3 py-2 border-b align-top">
                 <div class="font-medium">{{ o.seller }}</div>
                 <div class="text-xs text-slate-500">ID: {{ o.id }}</div>
+                <div v-if="o.qr" class="text-xs text-slate-500 break-all">QR: {{ o.qr }}</div>
               </td>
               <td class="px-3 py-2 border-b align-top">{{ money(o.amount) }}</td>
               <td class="px-3 py-2 border-b align-top">

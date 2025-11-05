@@ -25,7 +25,10 @@
         <tbody>
           <tr v-for="(r, i) in filtered" :key="i" class="hover:bg-slate-50">
             <td class="px-3 py-2 border-b whitespace-nowrap">{{ formatDate(r.timestamp) }}</td>
-            <td class="px-3 py-2 border-b break-all">{{ r.qr }}</td>
+            <td class="px-3 py-2 border-b break-all">
+              {{ r.qr }}
+              <span v-if="used.has(r.qr)" class="ml-2 text-xs text-slate-500">— уже в операциях</span>
+            </td>
             <td class="px-3 py-2 border-b">{{ r.source }}</td>
             <td class="px-3 py-2 border-b">
               <button
@@ -91,6 +94,7 @@ onBeforeUnmount(() => { if (timer.value) window.clearInterval(timer.value); });
 
 async function createOperation(qr: string, idx: number) {
   try {
+    if (used.value.has(qr)) return;
     loading.value[idx] = true;
     const { normalized: data, raw } = await getCheckByQR(qr);
     const op = {
