@@ -5,6 +5,11 @@
       <div class="text-sm text-slate-500">Всего: {{ ops.length }}</div>
     </header>
 
+    <div class="flex items-center gap-2">
+      <button class="px-3 py-1.5 rounded-md border" @click="openModal('/stores/new','stores')">Новый магазин</button>
+      <button class="px-3 py-1.5 rounded-md border" @click="openModal('/products/new','products')">Новый товар</button>
+    </div>
+
     <div class="rounded-lg border overflow-hidden bg-white">
       <table class="min-w-full text-sm">
         <thead class="bg-slate-50 text-left">
@@ -66,6 +71,19 @@
         </tbody>
       </table>
     </div>
+
+    <!-- Popup с формой добавления -->
+    <div v-if="showModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
+      <div class="bg-white rounded-md shadow-xl w-[90vw] h-[90vh] overflow-hidden flex flex-col">
+        <div class="p-2 border-b flex items-center justify-between text-sm">
+          <div>Быстрое добавление</div>
+          <div class="flex items-center gap-2">
+            <button class="rounded-md border px-2 py-1" @click="closeModal">Закрыть</button>
+          </div>
+        </div>
+        <iframe :src="modalUrl" class="flex-1"></iframe>
+      </div>
+    </div>
   </section>
 </template>
 
@@ -83,6 +101,9 @@ const storeSelect = ref<Record<string, string>>({});
 const products = ref<ProductRef[]>([]);
 const edited = ref<Record<string, { items: { name:string; price:number; quantity:number; product_id: string | null }[] }>>({});
 const productQuery = ref<Record<string, Record<number, string>>>({});
+const showModal = ref(false);
+const modalUrl = ref('');
+const modalKind = ref<'stores'|'products'|''>('');
 
 function getId(o: any){ return (typeof o._id==='string'? o._id : o._id?.$oid) || o.id; }
 function formatDate(iso: string){ try { return new Date(iso).toLocaleString(); } catch { return iso; } }
@@ -143,6 +164,17 @@ async function saveItems(o: any){
   const id = getId(o);
   const payload = { items: edited.value[id]?.items || [] };
   try { await fetch(`${API}/operations/${id}`, { method: 'PUT', headers: authHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify(payload) }); alert('Позиции сохранены'); } catch{}
+}
+
+function openModal(url: string, kind: 'stores'|'products'){
+  modalUrl.value = url;
+  modalKind.value = kind;
+  showModal.value = true;
+}
+function closeModal(){
+  showModal.value = false;
+  if (modalKind.value === 'stores') loadStores();
+  if (modalKind.value === 'products') loadProducts();
 }
 
 onMounted(()=>{ loadOps(); loadStores(); loadProducts(); });
