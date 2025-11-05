@@ -63,6 +63,7 @@ const source = ref('');
 const loading = ref<Record<number, boolean>>({});
 const router = useRouter();
 const store = useOperationsStore();
+const used = computed(() => new Set((store.operations || []).map(o => (o as any).qr).filter(Boolean) as string[]));
 
 async function fetchReceipts() {
   try {
@@ -102,6 +103,7 @@ async function createOperation(qr: string, idx: number) {
         price: (i.price ?? 0) / 100,
         quantity: i.quantity ?? 1,
       })),
+      qr: qr,
       status: 'draft' as const,
       raw,
       uploaded_by: receipts.value[idx]?.user || '',

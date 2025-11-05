@@ -17,6 +17,7 @@ export type Operation = {
   raw?: any;
   store_id?: string | null;
   uploaded_by?: string;
+  qr?: string | null;
 };
 
 const STORAGE_KEY = 'operations';
