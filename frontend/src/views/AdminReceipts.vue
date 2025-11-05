@@ -103,7 +103,9 @@ async function createOperation(qr: string, idx: number) {
         quantity: i.quantity ?? 1,
       })),
       status: 'draft' as const,
-      raw,\n      uploaded_by: receipts.value[idx]?.user || '',\n    };
+      raw,
+      uploaded_by: receipts.value[idx]?.user || '',
+    };
     store.add(op);
     router.push('/admin/operations');
   } catch (e: any) {
@@ -113,4 +115,5 @@ async function createOperation(qr: string, idx: number) {
   }
 }
 </script>
+
 
