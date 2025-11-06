@@ -67,7 +67,7 @@ const router = useRouter();
 const ops = ref<any[]>([]);
 const used = computed(() => new Set((ops.value || []).map(o => (typeof o.qr==='string'? o.qr : '')).filter(Boolean)));
 const blockedUsers = computed(() => new Set((ops.value || [])
-  .filter(o => o.status !== 'deleted')
+  .filter(o => o.status === 'draft')
   .map(o => o.uploaded_by)
   .filter((u: any) => typeof u === 'string' && u.length>0)));
 

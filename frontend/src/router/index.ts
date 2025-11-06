@@ -18,6 +18,7 @@ const Rating = () => import('../views/Rating.vue');
 const Privacy = () => import('../views/Privacy.vue');
 const ScanQR = () => import('../views/ScanQR.vue');
 const AdminReceipts = () => import('../views/AdminReceipts.vue');
+const AdminOperations = () => import('../views/AdminOperations.vue');
 
 const router = createRouter({
   history: createWebHistory(),
@@ -44,6 +45,7 @@ const router = createRouter({
     { path: '/scan', name: 'scan', component: ScanQR },
     { path: '/admin', name: 'admin', component: () => import('../views/Admin.vue'), meta: { requiresAdmin: true } },
     { path: '/admin/receipts', name: 'admin-receipts', component: AdminReceipts, meta: { requiresAdmin: true } },
+    { path: '/admin/operations', name: 'admin-operations', component: AdminOperations, meta: { requiresAdmin: true } },
     { path: '/:pathMatch(.*)*', redirect: '/' },
   ],
   scrollBehavior() {

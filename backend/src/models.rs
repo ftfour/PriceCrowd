@@ -240,5 +240,5 @@ pub struct Operation {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub uploaded_by: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub raw: Option<bson::Bson>,
+    pub raw: Option<String>,
 }

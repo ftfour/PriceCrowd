@@ -21,7 +21,10 @@
           <p>SPA: Vue 3 + Vite. Backend: Rust + Axum + MongoDB.</p>
           <div class="rounded-md border p-3 bg-slate-50">
             <div class="font-medium mb-2">Быстрые действия</div>
-            <button @click="clearAll" class="rounded-md bg-red-600 text-white px-3 py-1.5">Очистить тестовые данные</button>
+            <div class="flex gap-2 flex-wrap">
+              <button @click="clearAll" class="rounded-md bg-red-600 text-white px-3 py-1.5">Очистить тестовые данные</button>
+              <button @click="downloadExport" class="rounded-md bg-blue-600 text-white px-3 py-1.5">Выгрузить данные</button>
+            </div>
             <div v-if="actionMsg" class="text-xs text-slate-600 mt-2">{{ actionMsg }}</div>
           </div>
         </div>
@@ -46,6 +49,26 @@ async function clearAll() {
   try {
     const res = await fetch(`${API}/dev/clear`, { method: 'POST', headers: authHeaders() });
     actionMsg.value = res.ok ? 'Данные очищены' : `Ошибка очистки: ${res.status}`;
+  } catch (e: any) {
+    actionMsg.value = e?.message || 'Сетевая ошибка';
+  }
+}
+
+async function downloadExport() {
+  try {
+    const res = await fetch(`${API}/export`, { headers: authHeaders() });
+    if (!res.ok) { actionMsg.value = `Ошибка выгрузки: ${res.status}`; return; }
+    const blob = await res.blob();
+    // Try to extract filename from headers
+    let filename = 'pricecrowd_export.json';
+    const cd = res.headers.get('content-disposition') || '';
+    const m = /filename="?([^";]+)"?/i.exec(cd);
+    if (m && m[1]) filename = m[1];
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+    actionMsg.value = 'Выгрузка началась';
   } catch (e: any) {
     actionMsg.value = e?.message || 'Сетевая ошибка';
   }

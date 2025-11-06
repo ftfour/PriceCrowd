@@ -7,9 +7,11 @@ pub mod auth;
 pub mod receipt;
 pub mod price;
 pub mod telegram;
+pub mod fns;
 
 // Экспорт подмодулей для удобного импорта в main/router
 pub use auth::*;
 pub use receipt::*;
 pub use price::*;
 pub use telegram::*;
+pub use fns::*;

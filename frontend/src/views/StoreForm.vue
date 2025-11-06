@@ -41,6 +41,7 @@
 <script setup lang="ts">
 import { onMounted, ref, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { authHeaders } from '../api';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 const route = useRoute();
@@ -70,7 +71,7 @@ async function uploadIfNeeded(): Promise<string | undefined> {
   if (!file.value) return undefined;
   const data = new FormData();
   data.append('file', file.value);
-  const res = await fetch(`${API}/upload`, { method: 'POST', body: data });
+  const res = await fetch(`${API}/upload`, { method: 'POST', body: data, headers: authHeaders() });
   if (!res.ok) throw new Error('Upload failed');
   const json = await res.json();
   return json.url as string;
@@ -84,14 +85,14 @@ async function onSubmit() {
     const payload: any = { ...form.value };
     if (image_url) payload.image_url = image_url;
     if (isEdit.value && id) {
-      const res = await fetch(`${API}/stores/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      const res = await fetch(`${API}/stores/${id}`, { method: 'PUT', headers: authHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify(payload) });
       if (!res.ok) {
         const txt = await res.text();
         throw new Error(`Ошибка сохранения: ${res.status} ${txt}`);
       }
       router.push(`/stores/${id}`);
     } else {
-      const res = await fetch(`${API}/stores`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      const res = await fetch(`${API}/stores`, { method: 'POST', headers: authHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify(payload) });
       if (!res.ok) {
         const txt = await res.text();
         throw new Error(`Ошибка создания: ${res.status} ${txt}`);

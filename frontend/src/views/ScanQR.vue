@@ -69,38 +69,40 @@ function getTelegramUserId(): string | null {
 
 async function sendToBackend(qr: string) {
   const user = getTelegramUserId() ?? 'anonymous';
-  const res = await fetch(${API}/receipts/upload, {
+  const res = await fetch(`${API}/receipts/upload`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ qr, user, source: 'telegram_webapp' }),
   });
+
   const data = await res.json().catch(() => ({}));
+
   if (res.ok && data?.status === 'ok') {
     statusOk.value = true;
-    statusMsg.value = '??? ??????';
+    statusMsg.value = '✅ Чек отправлен';
   } else if (res.ok && data?.status === 'duplicate') {
     statusOk.value = false;
-    statusMsg.value = '??? ??? ??? ????????';
+    statusMsg.value = '⚠️ Этот чек уже был загружен';
   } else {
     statusOk.value = false;
-    statusMsg.value = '?????? ??? ?????? ????';
+    statusMsg.value = 'Ошибка при отправке данных';
   }
 }
 
 async function verifyAndUpload(qr: string) {
   try {
     statusOk.value = false;
-    statusMsg.value = '????????? ???...';
+    statusMsg.value = 'Проверяем чек...';
     await getCheckByQR(qr);
     await sendToBackend(qr);
   } catch (e) {
     statusOk.value = false;
     const msg = (e as any)?.message || '';
-    statusMsg.value = msg ? ???????? ?? ??????:  : '???????? ?? ??????';
+    statusMsg.value = msg ? `Ошибка при проверке: ${msg}` : 'Не удалось проверить чек';
   }
 }
 
-function sendToTelegram function sendToTelegram(qr: string) {
+function sendToTelegram(qr: string) {
   try {
     const w = window as any;
     if (w?.Telegram?.WebApp?.sendData) {
@@ -133,13 +135,18 @@ async function startScanner() {
   qrText.value = '';
   scanning.value = true;
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' } },
+      audio: false,
+    });
     streamRef.value = stream;
     const video = videoEl.value!;
     video.srcObject = stream;
     await video.play();
+
     const canvas = canvasEl.value!;
     const ctx = canvas.getContext('2d')!;
+
     const scan = () => {
       if (!video.videoWidth || !video.videoHeight) {
         rafId.value = requestAnimationFrame(scan);
@@ -184,7 +191,9 @@ async function startScanner() {
 }
 
 onMounted(() => {
-  try { (window as any)?.Telegram?.WebApp?.expand?.(); } catch {}
+  try {
+    (window as any)?.Telegram?.WebApp?.expand?.();
+  } catch {}
   startScanner();
 });
 
@@ -194,14 +203,14 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-.aspect-video { aspect-ratio: 16 / 9; }
+.aspect-video {
+  aspect-ratio: 16 / 9;
+}
 .scan-square {
   width: 60%;
   height: 60%;
-  border: 2px solid rgba(255,255,255,0.9);
+  border: 2px solid rgba(255, 255, 255, 0.9);
   border-radius: 8px;
-  box-shadow: 0 0 0 9999px rgba(0,0,0,0.25) inset;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.25) inset;
 }
 </style>
-
-

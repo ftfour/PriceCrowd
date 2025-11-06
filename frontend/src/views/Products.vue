@@ -3,11 +3,15 @@
     <div class="grid grid-cols-12 gap-6">
       <aside class="col-span-12 md:col-span-3">
         <div class="rounded-lg border bg-white p-3">
-          <div class="font-medium mb-2">?????????</div>
+          <div class="font-medium mb-2">Категории</div>
           <ul class="space-y-1 text-sm">
-            <li><button @click="selectedCat=''" :class="catClass('')">??? ??????</button></li>
+            <li>
+              <button @click="selectedCat=''" :class="catClass('')">Все товары</button>
+            </li>
             <li v-for="c in categories" :key="c._id_str">
-              <button @click="selectedCat=c._id_str" :class="catClass(c._id_str)">{{ c.name }}</button>
+              <button @click="selectedCat=c._id_str" :class="catClass(c._id_str)">
+                {{ c.name }}
+              </button>
             </li>
           </ul>
         </div>
@@ -15,85 +19,85 @@
 
       <div class="col-span-12 md:col-span-9 space-y-6">
         <div class="flex items-end justify-between gap-4">
-      <h2 class="text-2xl font-semibold">??????</h2>
-      <div class="flex items-center gap-3">
-        <input
-          v-model="query"
-          type="text"
-          placeholder="????? ?? ???????..."
-          class="w-64 rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-        <RouterLink
-          v-if="isAdmin"
-          to="/products/new"
-          class="rounded-md bg-blue-600 text-white px-3 py-2 text-sm"
-        >
-          ???????? ?????
-        </RouterLink>
-      </div>
+          <h2 class="text-2xl font-semibold">Товары</h2>
+          <div class="flex items-center gap-3">
+            <input
+              v-model="query"
+              type="text"
+              placeholder="Поиск по товарам..."
+              class="w-64 rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <RouterLink
+              v-if="isAdmin"
+              to="/products/new"
+              class="rounded-md bg-blue-600 text-white px-3 py-2 text-sm"
+            >
+              Добавить товар
+            </RouterLink>
+          </div>
         </div>
 
         <div class="rounded-lg border bg-white divide-y">
-      <div
-        v-for="p in filtered"
-        :key="p._id"
-        class="p-4 flex items-center gap-4"
-      >
-        <div
-          class="h-16 w-16 sm:h-20 sm:w-20 rounded-xl bg-slate-50 border flex items-center justify-center overflow-hidden"
-        >
-          <img
-            :src="toAbs(p.image_url)"
-            alt="product"
-            class="max-h-14 sm:max-h-16 object-contain"
-          />
-        </div>
-        <div class="flex-1 min-w-0">
-          <div class="flex items-start justify-between gap-3">
-            <div class="min-w-0">
-              <RouterLink
-                :to="`/products/${p._id}`"
-                class="font-medium text-gray-900 hover:underline truncate block"
-              >
-                {{ p.title }}
-              </RouterLink>
-              <p class="mt-1 text-xs text-gray-500 break-all">ID: {{ p._id }}</p>
-            </div>
-            <div class="flex gap-2 shrink-0" v-if="isAdmin">
-              <RouterLink
-                :to="`/products/${p._id}/edit`"
-                class="rounded-md border px-3 py-1.5 text-xs"
-              >
-                ?????????????
-              </RouterLink>
-              <button
-                @click="remove(p)"
-                class="rounded-md bg-red-600 text-white px-3 py-1.5 text-xs"
-              >
-                ???????
-              </button>
-            </div>
-          </div>
-          <p class="text-sm text-gray-700 mt-2 line-clamp-2">
-            {{ p.desc }}
-          </p>
-          <div class="mt-2 flex flex-wrap gap-2">
-            <span
-              v-for="cid in p.category_ids"
-              :key="cid"
-              class="text-xs bg-slate-100 border border-slate-200 rounded px-2 py-1"
+          <div
+            v-for="p in filtered"
+            :key="p._id"
+            class="p-4 flex items-center gap-4"
+          >
+            <div
+              class="h-16 w-16 sm:h-20 sm:w-20 rounded-xl bg-slate-50 border flex items-center justify-center overflow-hidden"
             >
-              {{ categoryName(cid) }}
-            </span>
+              <img
+                :src="toAbs(p.image_url)"
+                alt="product"
+                class="max-h-14 sm:max-h-16 object-contain"
+              />
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                  <RouterLink
+                    :to="`/products/${p._id}`"
+                    class="font-medium text-gray-900 hover:underline truncate block"
+                  >
+                    {{ p.title }}
+                  </RouterLink>
+                  <p class="mt-1 text-xs text-gray-500 break-all">ID: {{ p._id }}</p>
+                </div>
+                <div class="flex gap-2 shrink-0" v-if="isAdmin">
+                  <RouterLink
+                    :to="`/products/${p._id}/edit`"
+                    class="rounded-md border px-3 py-1.5 text-xs"
+                  >
+                    Редактировать
+                  </RouterLink>
+                  <button
+                    @click="remove(p)"
+                    class="rounded-md bg-red-600 text-white px-3 py-1.5 text-xs"
+                  >
+                    Удалить
+                  </button>
+                </div>
+              </div>
+              <p class="text-sm text-gray-700 mt-2 line-clamp-2">
+                {{ p.desc }}
+              </p>
+              <div class="mt-2 flex flex-wrap gap-2">
+                <span
+                  v-for="cid in p.category_ids"
+                  :key="cid"
+                  class="text-xs bg-slate-100 border border-slate-200 rounded px-2 py-1"
+                >
+                  {{ categoryName(cid) }}
+                </span>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
-      <div
-        v-if="filtered.length === 0"
-        class="p-8 text-center text-slate-500"
-      >
-        ??? ???????
-      </div>
+          <div
+            v-if="filtered.length === 0"
+            class="p-8 text-center text-slate-500"
+          >
+            Нет товаров
+          </div>
         </div>
       </div>
     </div>
@@ -122,8 +126,10 @@ const placeholderUrl = '/placeholder-can.svg';
 const filtered = computed(() => {
   const q = query.value.trim().toLowerCase();
   return products.value.filter((p) => {
-    const matchText = !q || p.title.toLowerCase().includes(q) || p.desc.toLowerCase().includes(q);
-    const matchCat = !selectedCat.value || (p.category_ids || []).includes(selectedCat.value);
+    const matchText =
+      !q || p.title.toLowerCase().includes(q) || p.desc.toLowerCase().includes(q);
+    const matchCat =
+      !selectedCat.value || (p.category_ids || []).includes(selectedCat.value);
     return matchText && matchCat;
   });
 });
@@ -152,8 +158,7 @@ async function fetchProducts() {
     const list = await resCats.json();
     categories.value = list.map((c: any) => ({
       ...c,
-      _id_str:
-        typeof c._id === 'string' ? c._id : c._id?.$oid,
+      _id_str: typeof c._id === 'string' ? c._id : c._id?.$oid,
     }));
   }
 }
@@ -178,10 +183,10 @@ const isAdmin = computed(
   () => auth.isAdmin.value === true || auth.state.role === 'admin'
 );
 
-function catClass(id: string){
+function catClass(id: string) {
   return [
     'block w-full text-left px-2 py-1 rounded hover:bg-slate-100',
-    (selectedCat.value===id) ? 'bg-slate-100 font-medium' : 'text-slate-700'
+    selectedCat.value === id ? 'bg-slate-100 font-medium' : 'text-slate-700',
   ];
 }
 </script>
@@ -194,4 +199,3 @@ function catClass(id: string){
   overflow: hidden;
 }
 </style>
-

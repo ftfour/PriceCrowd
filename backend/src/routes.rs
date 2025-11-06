@@ -1,6 +1,7 @@
 use axum::{Router, routing::{get, post, put}};
 use tower_http::cors::{Any, CorsLayer};
 use axum::http::HeaderValue;
+use axum::http::header::{ACCEPT, AUTHORIZATION, CONTENT_TYPE};
 use tower_http::services::ServeDir;
 
 use crate::handlers;
@@ -13,9 +14,22 @@ pub fn build(state: AppState, uploads_dir: String) -> Router {
                 .split(',')
                 .filter_map(|s| HeaderValue::from_str(s.trim()).ok())
                 .collect();
-            if origins.is_empty() { CorsLayer::new().allow_origin(Any).allow_methods(Any).allow_headers(Any) } else { CorsLayer::new().allow_origin(origins).allow_methods(Any).allow_headers(Any) }
+            if origins.is_empty() {
+                CorsLayer::new()
+                    .allow_origin(Any)
+                    .allow_methods(Any)
+                    .allow_headers([AUTHORIZATION, CONTENT_TYPE, ACCEPT])
+            } else {
+                CorsLayer::new()
+                    .allow_origin(origins)
+                    .allow_methods(Any)
+                    .allow_headers([AUTHORIZATION, CONTENT_TYPE, ACCEPT])
+            }
         }
-        Err(_) => CorsLayer::new().allow_origin(Any).allow_methods(Any).allow_headers(Any),
+        Err(_) => CorsLayer::new()
+            .allow_origin(Any)
+            .allow_methods(Any)
+            .allow_headers([AUTHORIZATION, CONTENT_TYPE, ACCEPT]),
     };
 
     let static_service = ServeDir::new(&uploads_dir);
@@ -62,8 +76,9 @@ pub fn build(state: AppState, uploads_dir: String) -> Router {
         .route("/dev/clear", post(handlers::dev::clear_all))
         .route("/ratings/grant", post(handlers::ratings::award_points))
         .route("/operations", get(handlers::operations::list_operations).post(handlers::operations::create_operation))
-        .route("/operations/:id", put(handlers::operations::update_operation).delete(handlers::operations::delete_operation))
+        .route("/operations/:id", get(handlers::operations::get_operation).put(handlers::operations::update_operation).delete(handlers::operations::delete_operation))
         .route("/operations/:id/status", put(handlers::operations::update_status))
+        .route("/export", get(handlers::export::export_all))
         .route("/upload", post(handlers::uploads::upload_file))
         .with_state(state.clone())
         .layer(admin_guard);
