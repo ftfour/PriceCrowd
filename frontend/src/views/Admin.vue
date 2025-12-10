@@ -12,6 +12,7 @@
         <div class="ml-auto flex items-center gap-4">
           <RouterLink to="/admin/receipts" class="text-gray-700 hover:text-black">Чеки</RouterLink>
           <RouterLink to="/admin/operations" class="text-gray-700 hover:text-black">Операции</RouterLink>
+          <RouterLink to="/admin/reports" class="text-gray-700 hover:text-black">Отчёты</RouterLink>
         </div>
       </nav>
       <div class="p-4">
@@ -22,7 +23,8 @@
           <div class="rounded-md border p-3 bg-slate-50">
             <div class="font-medium mb-2">Быстрые действия</div>
             <div class="flex gap-2 flex-wrap">
-              <button @click="clearAll" class="rounded-md bg-red-600 text-white px-3 py-1.5">Очистить тестовые данные</button>
+              <button @click="seed" class="rounded-md bg-green-600 text-white px-3 py-1.5">Заполнить сайт тысячами тестовыми записями</button>
+              <button @click="clearAll" class="rounded-md bg-red-600 text-white px-3 py-1.5">Показать только оригинальные данные</button>
               <button @click="downloadExport" class="rounded-md bg-blue-600 text-white px-3 py-1.5">Выгрузить данные</button>
             </div>
             <div v-if="actionMsg" class="text-xs text-slate-600 mt-2">{{ actionMsg }}</div>
@@ -41,11 +43,22 @@ import TelegramSettings from './admin/TelegramSettings.vue';
 import AdminUsers from './admin/Users.vue';
 import { API, authHeaders } from '../api';
 
-const tab = ref<'telegram'|'users'|'about'>('telegram');
+const tab = ref<'telegram'|'users'|'about'>('about');
 const actionMsg = ref('');
 
+async function seed() {
+  if (!confirm('Заполнить сайт тестовыми данными? Будет создано большое количество записей.')) return;
+  try {
+    actionMsg.value = 'Начинаю создание тестовых данных...';
+    const res = await fetch(`${API}/dev/seed`, { method: 'POST', headers: authHeaders() });
+    actionMsg.value = res.ok ? 'Тестовые данные создаются в фоновом режиме' : `Ошибка создания: ${res.status}`;
+  } catch (e: any) {
+    actionMsg.value = e?.message || 'Сетевая ошибка';
+  }
+}
+
 async function clearAll() {
-  if (!confirm('Очистить тестовые данные? Продукты, магазины, категории, чеки, события будут удалены.')) return;
+  if (!confirm('Удалить тестовые данные? Продукты, магазины, категории, чеки, события, созданные для теста, будут удалены.')) return;
   try {
     const res = await fetch(`${API}/dev/clear`, { method: 'POST', headers: authHeaders() });
     actionMsg.value = res.ok ? 'Данные очищены' : `Ошибка очистки: ${res.status}`;

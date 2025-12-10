@@ -1,5 +1,6 @@
 use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
 use bson::doc;
+use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use tokio::task::JoinHandle;
 use tokio::time::{sleep, Duration};
@@ -8,8 +9,9 @@ use std::sync::atomic::{AtomicI64, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
 use once_cell::sync::Lazy;
 use tokio::sync::Mutex;
+use anyhow::anyhow;
 
-use crate::state::AppState;
+use crate::{state::AppState, models::Receipt};
 
 // Краткая команда для выдачи политики конфиденциальности в боте
 const PRIVACY_TEXT: &str = r#"Политика конфиденциальности проекта «PriceCrowd»
@@ -71,6 +73,8 @@ pub struct TelegramMessage {
     pub text: Option<String>,
     #[serde(default)]
     pub from: Option<TelegramUser>,
+    #[serde(default)]
+    pub web_app_data: Option<WebAppData>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -78,6 +82,9 @@ pub struct TelegramChat { pub id: i64 }
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct TelegramUser { #[allow(dead_code)] pub id: i64, #[allow(dead_code)] pub first_name: Option<String>, #[serde(default)] pub username: Option<String> }
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct WebAppData { pub data: String }
 
 #[derive(Serialize)]
 struct SendMessagePayload<'a> { chat_id: i64, text: &'a str }
@@ -93,7 +100,7 @@ async fn send_scan_button(token: &str, chat_id: i64) -> anyhow::Result<()> {
     let markup = serde_json::json!({
         "inline_keyboard": [[{
             "text": "📷 Сканировать чек",
-            "web_app": { "url": "https://pricecrowd.ru/scan" }
+            "web_app": { "url": scan_url() }
         }]]
     });
     let payload = Payload { chat_id, text: "Сканируй QR-код чека", reply_markup: markup };
@@ -110,7 +117,7 @@ pub async fn webhook(State(state): State<AppState>, Json(update): Json<TelegramU
     if !(s.enabled && s.webhook_enabled) { return StatusCode::OK; }
     let Some(token) = s.token.as_ref() else { return StatusCode::OK; };
     if let Some(msg) = update.message {
-        let _ = send_message(token, msg.chat.id, "Привет!").await;
+        let _ = send_scan_button(token, msg.chat.id).await;
     }
     StatusCode::OK
 }
@@ -144,6 +151,17 @@ pub fn spawn_poller(state: AppState) -> JoinHandle<()> {
                             for u in &updates {
                                 if let Some(ref msg) = u.message {
                                     let text = msg.text.clone().unwrap_or_default();
+                                    if let Some(ref wad) = msg.web_app_data {
+                                        let who = msg.from.as_ref();
+                                        match handle_webapp_qr(&state, &wad.data, who).await {
+                                            Ok("ok") => { let _ = send_message(&token, msg.chat.id, "✅ Чек отправлен"); }
+                                            Ok("duplicate") => { let _ = send_message(&token, msg.chat.id, "⚠️ Этот чек уже был загружен"); }
+                                            Ok("invalid_qr") => { let _ = send_message(&token, msg.chat.id, "QR не похож на чек"); }
+                                            Ok(_) => {}
+                                            Err(e) => { let _ = send_message(&token, msg.chat.id, "Ошибка при загрузке чека"); push_log("error", &format!("upload qr error: {}", e)).await; }
+                                        }
+                                        continue;
+                                    }
                                     if is_privacy_query(&text) {
                                         let _ = send_message(&token, msg.chat.id, PRIVACY_TEXT).await;
                                         continue;
@@ -156,7 +174,7 @@ pub fn spawn_poller(state: AppState) -> JoinHandle<()> {
                                             Err(e) => { let _ = send_message(&token, msg.chat.id, "Ошибка привязки").await; push_log("error", &format!("link error: {}", e)).await; }
                                         }
                                     } else {
-                                        let _ = send_message(&token, msg.chat.id, "Привет!").await;
+                                        let _ = send_scan_button(&token, msg.chat.id).await;
                                     }
                                 }
                             }
@@ -177,6 +195,10 @@ pub fn spawn_poller(state: AppState) -> JoinHandle<()> {
             }
         }
     })
+}
+
+fn scan_url() -> String {
+    std::env::var("WEBAPP_URL").unwrap_or_else(|_| "https://pricecrowd.ru/scan".to_string())
 }
 
 async fn get_updates(client: &reqwest::Client, token: &str, offset: i64) -> anyhow::Result<(Vec<TelegramUpdate>, i64)> {
@@ -260,4 +282,46 @@ async fn link_account(state: &AppState, code: &str, chat_id: i64, username: Opti
         return Ok(true);
     }
     Ok(false)
+}
+
+async fn handle_webapp_qr(state: &AppState, qr: &str, from: Option<&TelegramUser>) -> anyhow::Result<&'static str> {
+    let qr_trimmed = qr.trim();
+    let ok_len = qr_trimmed.len() >= 16;
+    let pattern_ok = qr_trimmed.contains("t=") && qr_trimmed.contains("fn=");
+    if !ok_len || !pattern_ok {
+        return Ok("invalid_qr");
+    }
+
+    let user = from
+        .and_then(|u| u.username.clone())
+        .unwrap_or_else(|| from.map(|u| u.id.to_string()).unwrap_or_else(|| "telegram".to_string()));
+    let source = "telegram_bot".to_string();
+
+    let rec = Receipt {
+        id: None,
+        qr: qr_trimmed.to_string(),
+        timestamp: Utc::now(),
+        source,
+        user: user.clone(),
+    };
+
+    let col = state.db.collection::<Receipt>("receipts");
+    if let Ok(Some(_)) = col.find_one(doc!{"qr": &rec.qr}, None).await {
+        return Ok("duplicate");
+    }
+
+    match col.insert_one(rec.clone(), None).await {
+        Ok(_) => {
+            let _ = crate::handlers::events::log_event(state, "receipt_uploaded", "Загружен чек (telegram)", Some(user)).await;
+            Ok("ok")
+        }
+        Err(e) => {
+            let msg = e.to_string();
+            if msg.contains("E11000") || msg.contains("duplicate key") {
+                Ok("duplicate")
+            } else {
+                Err(anyhow!(e))
+            }
+        }
+    }
 }
