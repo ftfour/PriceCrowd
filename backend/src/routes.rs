@@ -80,6 +80,7 @@ pub fn build(state: AppState, uploads_dir: String) -> Router {
         .route("/operations/:id", get(handlers::operations::get_operation).put(handlers::operations::update_operation).delete(handlers::operations::delete_operation))
         .route("/operations/:id/status", put(handlers::operations::update_status))
         .route("/export", get(handlers::export::export_all))
+        .route("/import", post(handlers::export::import_all))
         .route("/upload", post(handlers::uploads::upload_file))
         .with_state(state.clone())
         .layer(admin_guard);

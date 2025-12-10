@@ -1,8 +1,9 @@
-use axum::{extract::State, response::IntoResponse, http::{HeaderMap, HeaderValue, header}};
+use axum::{extract::State, response::IntoResponse, http::{HeaderMap, HeaderValue, header}, Json};
 use futures::stream::StreamExt;
 use serde::Serialize;
+use mongodb::bson::{doc, Document};
 
-use crate::{state::AppState, models::{Product, Store, Category, StoreItem, StoreActivity, User, Receipt, EventDoc, Operation}};
+use crate::{state::AppState, models::{User, Receipt, EventDoc, Operation}};
 
 async fn collect_all<T: Unpin + Send + for<'de> serde::Deserialize<'de> + Serialize + Clone>(
     col: &mongodb::Collection<T>,
@@ -75,3 +76,66 @@ pub async fn export_all(State(state): State<AppState>) -> impl IntoResponse {
     (headers, axum::Json(payload))
 }
 
+#[derive(serde::Deserialize)]
+pub struct ImportDump {
+    #[serde(default)] products: Vec<Document>,
+    #[serde(default)] stores: Vec<Document>,
+    #[serde(default)] categories: Vec<Document>,
+    #[serde(default)] store_items: Vec<Document>,
+    #[serde(default)] store_activities: Vec<Document>,
+    #[serde(default)] settings: Vec<Document>,
+    #[serde(default)] telegram_links: Vec<Document>,
+    #[serde(default)] users: Vec<Document>,
+    #[serde(default)] receipts: Vec<Document>,
+    #[serde(default)] events: Vec<Document>,
+    #[serde(default)] operations: Vec<Document>,
+}
+
+async fn replace_collection(col: &mongodb::Collection<Document>, docs: &[Document]) -> mongodb::error::Result<u64> {
+    let _ = col.delete_many(doc!{}, None).await?;
+    if docs.is_empty() { return Ok(0); }
+    let res = col.insert_many(docs.to_vec(), None).await?;
+    Ok(res.inserted_ids.len() as u64)
+}
+
+pub async fn import_all(State(state): State<AppState>, Json(payload): Json<ImportDump>) -> impl IntoResponse {
+    // Use raw Document to preserve _id/ObjectId data; assumes export format
+    let products_col = state.db.collection::<Document>("products");
+    let stores_col = state.db.collection::<Document>("stores");
+    let categories_col = state.db.collection::<Document>("categories");
+    let store_items_col = state.db.collection::<Document>("store_items");
+    let store_activities_col = state.db.collection::<Document>("store_activities");
+    let settings_col = state.db.collection::<Document>("settings");
+    let telegram_links_col = state.db.collection::<Document>("telegram_links");
+    let users_col = state.db.collection::<Document>("users");
+    let receipts_col = state.db.collection::<Document>("receipts");
+    let events_col = state.db.collection::<Document>("events");
+    let operations_col = state.db.collection::<Document>("operations");
+
+    let mut applied: Vec<(&str, u64)> = Vec::new();
+    macro_rules! apply {
+        ($label:literal, $col:expr, $docs:expr) => {
+            match replace_collection(&$col, &$docs).await {
+                Ok(cnt) => applied.push(($label, cnt)),
+                Err(e) => return axum::response::Json(doc!{"status": "error", "message": format!("{}: {}", $label, e)}).into_response(),
+            }
+        };
+    }
+
+    apply!("products", products_col, payload.products);
+    apply!("stores", stores_col, payload.stores);
+    apply!("categories", categories_col, payload.categories);
+    apply!("store_items", store_items_col, payload.store_items);
+    apply!("store_activities", store_activities_col, payload.store_activities);
+    apply!("settings", settings_col, payload.settings);
+    apply!("telegram_links", telegram_links_col, payload.telegram_links);
+    apply!("users", users_col, payload.users);
+    apply!("receipts", receipts_col, payload.receipts);
+    apply!("events", events_col, payload.events);
+    apply!("operations", operations_col, payload.operations);
+
+    axum::response::Json(doc!{
+        "status": "ok",
+        "imported": applied.iter().map(|(k,v)| doc!{"name": k, "count": (*v as i64)}).collect::<Vec<Document>>()
+    }).into_response()
+}

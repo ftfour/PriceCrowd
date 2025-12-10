@@ -27,6 +27,8 @@
               <button @click="seed" class="rounded-md bg-green-600 text-white px-3 py-1.5">Заполнить сайт тысячами тестовыми записями</button>
               <button @click="clearAll" class="rounded-md bg-red-600 text-white px-3 py-1.5">Показать только оригинальные данные</button>
               <button @click="downloadExport" class="rounded-md bg-blue-600 text-white px-3 py-1.5">Выгрузить данные</button>
+              <button @click="chooseImport" class="rounded-md bg-indigo-600 text-white px-3 py-1.5">Загрузить данные</button>
+              <input ref="importInput" type="file" accept="application/json" class="hidden" @change="importData" />
             </div>
             <div v-if="actionMsg" class="text-xs text-slate-600 mt-2">{{ actionMsg }}</div>
           </div>
@@ -46,6 +48,7 @@ import { API, authHeaders } from '../api';
 
 const tab = ref<'telegram'|'users'|'about'>('about');
 const actionMsg = ref('');
+const importInput = ref<HTMLInputElement | null>(null);
 
 async function seed() {
   if (!confirm('Заполнить сайт тестовыми данными? Будет создано большое количество записей.')) return;
@@ -85,6 +88,36 @@ async function downloadExport() {
     actionMsg.value = 'Выгрузка началась';
   } catch (e: any) {
     actionMsg.value = e?.message || 'Сетевая ошибка';
+  }
+}
+
+function chooseImport() {
+  actionMsg.value = '';
+  importInput.value?.click();
+}
+
+async function importData(e: Event) {
+  const target = e.target as HTMLInputElement;
+  const file = target?.files?.[0];
+  if (!file) return;
+  const text = await file.text().catch(() => '');
+  if (!text) { actionMsg.value = 'Не удалось прочитать файл'; target.value = ''; return; }
+  if (!confirm('Заменить текущие данные данными из файла? Текущие записи будут удалены.')) { target.value = ''; return; }
+  try {
+    actionMsg.value = 'Загружаем данные...';
+    const res = await fetch(`${API}/import`, { method: 'POST', headers: authHeaders({ 'Content-Type': 'application/json' }), body: text });
+    if (res.ok) {
+      const data = await res.json().catch(() => ({}));
+      const total = Array.isArray(data.imported) ? data.imported.reduce((a: number, x: any) => a + (x.count || 0), 0) : undefined;
+      actionMsg.value = total !== undefined ? `Импортировано записей: ${total}` : 'Импорт завершён';
+    } else {
+      const msg = await res.text().catch(() => '');
+      actionMsg.value = `Ошибка импорта: ${res.status} ${msg}`;
+    }
+  } catch (err: any) {
+    actionMsg.value = err?.message || 'Сетевая ошибка';
+  } finally {
+    target.value = '';
   }
 }
 
