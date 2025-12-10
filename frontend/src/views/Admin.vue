@@ -13,6 +13,7 @@
           <RouterLink to="/admin/receipts" class="text-gray-700 hover:text-black">Чеки</RouterLink>
           <RouterLink to="/admin/operations" class="text-gray-700 hover:text-black">Операции</RouterLink>
           <RouterLink to="/admin/reports" class="text-gray-700 hover:text-black">Отчёты</RouterLink>
+          <RouterLink to="/admin/heatmap" class="text-gray-700 hover:text-black">Теплокарта</RouterLink>
         </div>
       </nav>
       <div class="p-4">
